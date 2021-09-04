@@ -1,0 +1,17 @@
+{
+  "prefixes": [
+    "mono",
+    "di",
+    "tri",
+    "tetra",
+    "penta",
+    "hexa",
+    "hepta",
+    "octo",
+    "nona",
+    "deca"
+  ],
+  "suffixes": {
+
+  }
+}
