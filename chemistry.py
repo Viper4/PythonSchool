@@ -24,6 +24,8 @@ class Input(threading.Thread):
             self.periodic_table = json.load(file)
         with open("prefixes_suffixes.json", encoding='utf-8') as file:
             self.prefixes_suffixes = json.load(file)
+        with open("polyatomic_ions.json", encoding='utf-8') as file:
+            self.polyatomic_ions = json.load(file)
         print("chemistry: Active")
 
     def calculate(self):
@@ -77,7 +79,7 @@ class Input(threading.Thread):
 
     def get_molar_mass(self, formula, round_sig_figs):
         results = []
-        element_list = re.findall("[A-Z][a-z]?[0-9]*", formula)
+        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", formula)
         try:
             coefficient = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]", formula).group())
         except AttributeError:
@@ -86,7 +88,7 @@ class Input(threading.Thread):
             coefficient = 1
         total_molar_mass = 0.0
         print(self.format_compound(formula) + " molar mass:")
-        for element_string in element_list:
+        for element_string in element_string_list:
             for element in self.periodic_table["elements"]:
                 symbol = re.sub("[^A-Za-z]", "", element_string)
                 subscript = re.sub("[^0-9]", "", element_string)
@@ -161,11 +163,9 @@ class Input(threading.Thread):
 
         # Remove sig figs
         if sig_fig_difference > 0:
-            print("remove" + str(lowest_sig_figs + sig_fig_difference - 1))
             output = str(output)[:lowest_sig_figs + 1]
         # Add sig figs
         elif sig_fig_difference < 0:
-            print("add")
             output = str(output) + "."
             for i in range(-sig_fig_difference):
                 output = str(output) + "0"
@@ -173,10 +173,24 @@ class Input(threading.Thread):
         return output
 
     def get_systematic_name(self, compound):
-        element_info_list = []
-        element_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
+        formatted_compound = self.format_compound(compound)
+        print(formatted_compound + " systematic name:")
         systematic_name = ""
-        for element_string in element_list:
+        atomic_list = []
+        order = []
+        for polyatomic_ion in self.polyatomic_ions["ions"]:
+            if polyatomic_ion["symbol"] in compound:
+                subscript = re.sub("[^0-9]", "", re.search("[(]*" + polyatomic_ion["symbol"] + "[)]*[0-9]*", compound).group())
+                if subscript == "":
+                    subscript = "1"
+                index = re.sub("[^A-Z]", "", compound).index(re.sub("[^A-Z]", "", polyatomic_ion["symbol"]))
+                atomic_list.append({"symbol": polyatomic_ion["symbol"], "name": polyatomic_ion["name"].lower(),
+                                    "subscript": int(subscript), "charge": polyatomic_ion["charge"],
+                                    "category": "polyatomic ion", "index": index})
+                compound = compound.replace(polyatomic_ion["symbol"], "")
+                order.append(index)
+        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
+        for element_string in element_string_list:
             symbol = re.sub("[^A-Za-z]", "", element_string)
             subscript = re.sub("[^0-9]", "", element_string)
             if subscript == "":
@@ -188,22 +202,23 @@ class Input(threading.Thread):
                         charge = element["xpos"] - 18
                     elif element["xpos"] <= 2:
                         charge = element["xpos"]
-                    element_info_list.append({"symbol": symbol, "name": element["name"].lower(), "prefix": "", "suffix": "", "subscript": int(subscript), "charge": int(charge), "category": element["category"]})
-        formatted_compound = self.format_compound(compound)
-        print(formatted_compound + " systematic name:")
+                    index = re.sub("[^A-Z]", "", compound).index(re.sub("[^A-Z]", "", symbol))
+                    atomic_list.append({"symbol": symbol, "name": element["name"].lower(), "prefix": "", "suffix": "", "subscript": int(subscript), "charge": int(charge), "category": element["category"], "index": index})
+                    order.append(index)
+        atomic_list = [atomic_list[i] for i in order]
 
         not_metal = 0
         metal = 0
-        for element in element_info_list:
-            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in element["category"]:
+        for element in atomic_list:
+            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in element["category"] or "polyatomic ion" in element["category"]:
                 not_metal += 1
             elif "metal" in element["category"]:
                 metal += 1
             print(element["symbol"] + " is a " + element["category"])
         if metal == 0:
             print(formatted_compound + " is covalent")
-            for element in element_info_list:
-                if element_info_list.index(element) != 0:
+            for element in atomic_list:
+                if atomic_list.index(element) != 0:
                     syllables = self.syllables(element["name"])
                     element["name"] = syllables[0] + "ide"
                     element["prefix"] = self.prefixes_suffixes["prefixes"][element["f_subscript"] - 1]
@@ -212,22 +227,22 @@ class Input(threading.Thread):
                 systematic_name = str(systematic_name) + element["prefix"] + element["name"] + " "
         elif metal >= 1 and not_metal >= 1:
             print(formatted_compound + " is ionic")
-            for element in element_info_list:
+            for element in atomic_list:
                 if element["category"] == "transition metal":
-                    charge = int(-(element_info_list[1]["charge"] * element_info_list[1]["subscript"]) / element["subscript"])
-                    print(self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + str(element_info_list[1]["charge"]) + "*" + str(element_info_list[1]["subscript"]) + ")/" + str(element["subscript"]) + " = " + str(charge))
-                    systematic_name = str(systematic_name) + element["name"] + "(" + self.int_to_roman(charge) + ") "
+                    charge = int(-(atomic_list[1]["charge"] * atomic_list[1]["subscript"]) / element["subscript"])
+                    print(self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + str(atomic_list[1]["charge"]) + "*" + str(atomic_list[1]["subscript"]) + ")/" + str(element["subscript"]) + " = " + str(charge))
+                    systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
-                    if element_info_list.index(element) != 0:
+                    if element["category"] != "polyatomic ion" and atomic_list.index(element) != 0:
                         syllables = self.syllables(element["name"])
                         element["name"] = syllables[0] + "ide"
                     systematic_name = str(systematic_name) + element["name"] + " "
         return systematic_name
 
     def format_compound(self, compound):
-        element_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
+        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
         formatted_compound = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]", compound).group())
-        for element_string in element_list:
+        for element_string in element_string_list:
             formatted_compound = formatted_compound + self.translate_text(element_string, "f_subscript")
         return formatted_compound
 
