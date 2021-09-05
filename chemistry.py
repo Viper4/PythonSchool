@@ -18,6 +18,7 @@ class Input(threading.Thread):
         self.inputString = ""
         self.calcMode = ""
         self.lastResult = ""
+        self.showWork = True
         with open("settings.json", encoding='utf-8') as file:
             self.settings = json.load(file)
         with open("periodic_table.json", encoding='utf-8') as file:
@@ -30,24 +31,32 @@ class Input(threading.Thread):
 
     def calculate(self):
         self.inputString = str(input())
-        if self.inputString == "get_molar_mass" or self.inputString == "gmm":
+        if "show work" in self.inputString or "sw" in self.inputString:
+            self.showWork = not self.showWork
+            print(str(self.showWork))
+            re.sub("show work|sw", "", self.inputString)
+
+        if "get_molar_mass" in self.inputString or "gmm" in self.inputString:
             print("get_molar_mass: Type compound Ex: 2NaHCO3")
             self.calcMode = "get_molar_mass"
-        elif self.inputString == "get_element_info" or self.inputString == "gei":
+        elif "get_element_info" in self.inputString or "gei" in self.inputString:
             print("get_element_info: Type element")
             self.calcMode = "get_element_info"
-        elif self.inputString == "moles_to_grams" or self.inputString == "mtg":
+        elif "moles_to_grams" in self.inputString or "mtg" in self.inputString:
             print("moles_to_grams: Types moles and formula Ex: 1.3 mol NaCl")
             self.calcMode = "moles_to_grams"
-        elif self.inputString == "get_sig_figs" or self.inputString == "gsf":
+        elif "get_sig_figs" in self.inputString or "gsf" in self.inputString:
             print("get_sig_figs: Type number")
             self.calcMode = "get_sig_figs"
-        elif self.inputString == "get_systematic_name" or self.inputString == "gsn":
+        elif "get_systematic_name" in self.inputString or "gsn" in self.inputString:
             print("get_systematic_name: Type formula Ex: Fe2O3")
             self.calcMode = "get_systematic_name"
+        elif "get_mass_percent" in self.inputString or "gmp" in self.inputString:
+            print("get_mass_percent: Type elements/molecules in compound Ex: H2 O in H2O")
+            self.calcMode = "get_mass_percent"
         else:
             if self.calcMode == "get_molar_mass":
-                molar_mass = str(self.get_molar_mass(self.inputString, False, True))
+                molar_mass = str(self.get_molar_mass(self.inputString, False, self.showWork))
                 print("get_molar_mass: " + self.format_compound(self.inputString) + ": " + molar_mass)
                 self.lastResult = molar_mass
             elif self.calcMode == "get_element_info":
@@ -61,7 +70,7 @@ class Input(threading.Thread):
             elif self.calcMode == "moles_to_grams":
                 formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", self.inputString)
                 moles = re.sub(" mol ", "", re.sub(formula, "", self.inputString))
-                grams = self.moles_to_grams(moles, formula, True)
+                grams = self.moles_to_grams(moles, formula, True, self.showWork)
                 print("moles_to_grams: " + self.format_compound(formula) + " = " + grams + "g")
                 self.lastResult = grams
             elif self.calcMode == "get_sig_figs":
@@ -73,13 +82,18 @@ class Input(threading.Thread):
                     print("get_sig_figs: " + self.inputString + " -> " + result)
                 self.lastResult = result
             elif self.calcMode == "get_systematic_name":
-                name = self.get_systematic_name(self.inputString)
+                name = self.get_systematic_name(self.inputString, self.showWork)
                 print("get_systematic_name: " + self.format_compound(self.inputString) + " -> " + name)
                 self.lastResult = self.inputString
             elif self.calcMode == "get_mass_percent":
-                print("get_mass_percent: " + self.inputString)
+                split_string = self.inputString.split("in", 1)
+                elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
+                compound = re.sub("[ ]", "", split_string[1])
+                print("get_mass_percent: " + self.translate_text(self.inputString, "f_subscript"))
+                self.get_mass_percent(elements, compound, True, self.showWork)
+                self.lastResult = self.inputString
 
-    def get_molar_mass(self, formula, polyatomic, round_sig_figs):
+    def get_molar_mass(self, formula, round_sig_figs, show_work):
         try:
             coefficient = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]|[0-9]*[(]", formula).group())
         except AttributeError:
@@ -89,9 +103,7 @@ class Input(threading.Thread):
         total_molar_mass = 0.0
         results = []
         formatted_compound = self.format_compound(formula)
-        if polyatomic:
-            print(formatted_compound + " atomic mass:")
-        else:
+        if show_work:
             print(formatted_compound + " molar mass:")
 
         split_compound = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", formula)
@@ -102,7 +114,7 @@ class Input(threading.Thread):
                 p_subscript = re.sub("[^0-9]", "", re.search("[(].*?[)][0-9]*", string).group())
                 if p_subscript == "":
                     p_subscript = "1"
-                p_atomic_mass = self.get_molar_mass(re.sub("[()0-9]", "", string), True, False)
+                p_atomic_mass = self.get_molar_mass(re.sub("[()0-9]", "", string), False, False)
 
                 if len(split_compound) == 1:
                     p_molar_mass = int(coefficient) * p_atomic_mass * int(p_subscript)
@@ -112,8 +124,9 @@ class Input(threading.Thread):
                     p_molar_mass = p_atomic_mass * int(p_subscript)
                     results.append(p_molar_mass)
                     total_molar_mass += p_molar_mass
-                print(formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
-                    p_molar_mass))
+                if show_work:
+                    print(formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
+                        p_molar_mass))
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
@@ -127,26 +140,26 @@ class Input(threading.Thread):
                             molar_mass = atomic_mass * int(subscript)
                             results.append(molar_mass)
                             total_molar_mass += molar_mass
-                            print(self.translate_text(element_string, "f_subscript") + ": " + str(
-                                atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
+                            if show_work:
+                                print(self.translate_text(element_string, "f_subscript") + ": " + str(
+                                    atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
         if len(results) > 1:
             total_molar_mass *= int(coefficient)
-            if polyatomic:
-                print(formatted_compound + ": " + str(results)[1:-1].replace(", ", "+") + " = " + str(total_molar_mass))
-            else:
+            if show_work:
                 print(formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(
                     total_molar_mass))
             if round_sig_figs:
-                total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-")
+                total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-", show_work)
         return total_molar_mass
 
-    def moles_to_grams(self, moles, formula, round_sig_figs):
-        molar_mass = self.get_molar_mass(formula, False, False)
-        print(moles + " mol " + formula + " to grams:")
+    def moles_to_grams(self, moles, formula, round_sig_figs, show_work):
+        molar_mass = self.get_molar_mass(formula, False, True)
         grams = float(moles) * molar_mass
-        print(moles + "*" + str(molar_mass) + " = " + str(grams))
+        if show_work:
+            print(moles + " mol " + formula + " to grams:")
+            print(moles + "*" + str(molar_mass) + " = " + str(grams))
         if round_sig_figs:
-            grams = self.round_sig_figs(grams, [moles, molar_mass], "*/")
+            grams = self.round_sig_figs(grams, [moles, molar_mass], "*/", show_work)
 
         return str(grams)
 
@@ -164,7 +177,7 @@ class Input(threading.Thread):
             sig_figs = 0
         return sig_figs
 
-    def round_sig_figs(self, output, values, operation):
+    def round_sig_figs(self, output, values, operation, show_work):
         lowest_sig_figs = 999999999
         sig_figs = 999999999
         for value in values:
@@ -202,12 +215,12 @@ class Input(threading.Thread):
                 output = round(output, lowest_sig_figs)
             elif decimal_place_difference < 0:
                 output = str(output).ljust(-decimal_place_difference + len(str(output)), '0')
-
-        print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + "")
+        if show_work:
+            print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + "")
 
         return output
 
-    def get_systematic_name(self, compound):
+    def get_systematic_name(self, compound, show_work):
         formatted_compound = self.format_compound(compound)
         print(formatted_compound + " systematic name:")
         systematic_name = ""
@@ -220,9 +233,11 @@ class Input(threading.Thread):
                 not_metal += 1
             elif "metal" in element["category"]:
                 metal += 1
-            print(element["symbol"] + " is a " + element["category"])
+            if show_work:
+                print(element["symbol"] + " is a " + element["category"])
         if metal == 0:
-            print(formatted_compound + " is covalent")
+            if show_work:
+                print(formatted_compound + " is covalent")
             for element in atomic_list:
                 if atomic_list.index(element) != 0:
                     syllables = self.syllables(element["name"])
@@ -232,11 +247,13 @@ class Input(threading.Thread):
                         element["prefix"] = "mon"
                 systematic_name = str(systematic_name) + element["prefix"] + element["name"] + " "
         elif metal >= 1 and not_metal >= 1:
-            print(formatted_compound + " is ionic")
+            if show_work:
+                print(formatted_compound + " is ionic")
             for element in atomic_list:
                 if element["category"] == "transition metal":
                     charge = int(-(atomic_list[1]["charge"] * atomic_list[1]["subscript"]) / element["subscript"])
-                    print(self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + str(atomic_list[1]["charge"]) + "*" + str(atomic_list[1]["subscript"]) + ")/" + str(element["subscript"]) + " = " + str(charge))
+                    if show_work:
+                        print(self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + str(atomic_list[1]["charge"]) + "*" + str(atomic_list[1]["subscript"]) + ")/" + str(element["subscript"]) + " = " + str(charge))
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
                     if element["category"] != "polyatomic ion" and atomic_list.index(element) != 0:
@@ -245,11 +262,20 @@ class Input(threading.Thread):
                     systematic_name = str(systematic_name) + element["name"] + " "
         return systematic_name
 
-    def get_mass_percent(self, elements, compound):
-        molar_mass_dict = []
+    def get_mass_percent(self, elements, compound, round_sig_figs, show_work):
+        total_molar_mass = self.get_molar_mass(compound, False, show_work)
         for element in elements:
-            string = re.search("[(]*" + element + "[0-9]*[)]*[0-9]*", compound)
-            molar_mass_dict.append({"symbol": element, "molar_mass": self.get_molar_mass(string, False)})
+            if element not in compound:
+                print(element + " is not in " + compound)
+            else:
+                molar_mass = self.get_molar_mass(element, False, False)
+                mass_percent = (molar_mass / total_molar_mass) * 100
+                if round_sig_figs:
+                    mass_percent = self.round_sig_figs(mass_percent, [molar_mass, total_molar_mass], "*/", show_work)
+                if show_work:
+                    print(self.translate_text(element, "f_subscript") + "%: (" + str(molar_mass) + "/" + str(total_molar_mass) + ")*100 = " + str(mass_percent) + "%")
+                else:
+                    print(self.translate_text(element, "f_subscript") + "%: " + str(mass_percent) + "%")
 
     def process_compound(self, compound):
         atomic_list = []
