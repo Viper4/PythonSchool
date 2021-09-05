@@ -47,7 +47,7 @@ class Input(threading.Thread):
             self.calcMode = "get_systematic_name"
         else:
             if self.calcMode == "get_molar_mass":
-                molar_mass = str(self.get_molar_mass(self.inputString, True))
+                molar_mass = str(self.get_molar_mass(self.inputString, False, True))
                 print("get_molar_mass: " + self.format_compound(self.inputString) + ": " + molar_mass)
                 self.lastResult = molar_mass
             elif self.calcMode == "get_element_info":
@@ -76,40 +76,72 @@ class Input(threading.Thread):
                 name = self.get_systematic_name(self.inputString)
                 print("get_systematic_name: " + self.format_compound(self.inputString) + " -> " + name)
                 self.lastResult = self.inputString
+            elif self.calcMode == "get_mass_percent":
+                print("get_mass_percent: " + self.inputString)
 
-    def get_molar_mass(self, formula, round_sig_figs):
-        results = []
-        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", formula)
+    def get_molar_mass(self, formula, polyatomic, round_sig_figs):
         try:
-            coefficient = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]", formula).group())
+            coefficient = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]|[0-9]*[(]", formula).group())
         except AttributeError:
             coefficient = "1"
         if coefficient == "":
-            coefficient = 1
+            coefficient = "1"
         total_molar_mass = 0.0
-        print(self.format_compound(formula) + " molar mass:")
-        for element_string in element_string_list:
-            for element in self.periodic_table["elements"]:
-                symbol = re.sub("[^A-Za-z]", "", element_string)
-                subscript = re.sub("[^0-9]", "", element_string)
-                if subscript == "":
-                    subscript = "1"
-                if element["symbol"] == symbol:
-                    atomic_mass = element["atomic_mass"]
-                    molar_mass = atomic_mass * float(subscript)
-                    results.append(molar_mass)
-                    total_molar_mass += molar_mass
-                    print(self.translate_text(element_string, "f_subscript") + ": " + str(atomic_mass) + "*" + subscript + " = " + str(
-                        molar_mass))
-        total_molar_mass *= float(coefficient)
+        results = []
+        formatted_compound = self.format_compound(formula)
+        if polyatomic:
+            print(formatted_compound + " atomic mass:")
+        else:
+            print(formatted_compound + " molar mass:")
+
+        split_compound = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", formula)
+        for string in split_compound:
+            element_string_list = re.findall("[A-Z][a-z]?[0-9]*", string)
+            if len(element_string_list) > 1:
+                formatted_polyatomic = self.translate_text(string, "f_subscript")
+                p_subscript = re.sub("[^0-9]", "", re.search("[(].*?[)][0-9]*", string).group())
+                if p_subscript == "":
+                    p_subscript = "1"
+                p_atomic_mass = self.get_molar_mass(re.sub("[()0-9]", "", string), True, False)
+
+                if len(split_compound) == 1:
+                    p_molar_mass = int(coefficient) * p_atomic_mass * int(p_subscript)
+                    results.append(p_molar_mass)
+                    total_molar_mass += p_molar_mass
+                else:
+                    p_molar_mass = p_atomic_mass * int(p_subscript)
+                    results.append(p_molar_mass)
+                    total_molar_mass += p_molar_mass
+                print(formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
+                    p_molar_mass))
+            else:
+                for element_string in element_string_list:
+                    symbol = re.sub("[^A-Za-z]", "", element_string)
+                    subscript = re.sub("[^0-9]", "", element_string)
+                    if subscript == "":
+                        subscript = "1"
+
+                    for element in self.periodic_table["elements"]:
+                        if element["symbol"] == symbol:
+                            atomic_mass = element["atomic_mass"]
+                            molar_mass = atomic_mass * int(subscript)
+                            results.append(molar_mass)
+                            total_molar_mass += molar_mass
+                            print(self.translate_text(element_string, "f_subscript") + ": " + str(
+                                atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
         if len(results) > 1:
-            print(str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(total_molar_mass))
+            total_molar_mass *= int(coefficient)
+            if polyatomic:
+                print(formatted_compound + ": " + str(results)[1:-1].replace(", ", "+") + " = " + str(total_molar_mass))
+            else:
+                print(formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(
+                    total_molar_mass))
             if round_sig_figs:
                 total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-")
         return total_molar_mass
 
     def moles_to_grams(self, moles, formula, round_sig_figs):
-        molar_mass = self.get_molar_mass(formula, False)
+        molar_mass = self.get_molar_mass(formula, False, False)
         print(moles + " mol " + formula + " to grams:")
         grams = float(moles) * molar_mass
         print(moles + "*" + str(molar_mass) + " = " + str(grams))
@@ -154,21 +186,24 @@ class Input(threading.Thread):
                 output = self.shift_decimal_place(output, decimal_places, True)
             else:
                 output = round(output, lowest_sig_figs - out_sig_figs)
+
+            sig_fig_difference = self.get_sig_figs(output) - lowest_sig_figs
+            # Remove sig figs
+            if sig_fig_difference > 0:
+                output = str(output)[:lowest_sig_figs + 1]
+            # Add sig figs
+            elif sig_fig_difference < 0:
+                output = int(output)
         elif operation == "+-":
             output = round(output, lowest_sig_figs)
+            decimal_place_difference = -decimal.Decimal(str(output)).as_tuple().exponent - lowest_sig_figs
+            # Remove decimals
+            if decimal_place_difference > 0:
+                output = round(output, lowest_sig_figs)
+            elif decimal_place_difference < 0:
+                output = str(output).ljust(-decimal_place_difference + len(str(output)), '0')
 
         print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + "")
-
-        sig_fig_difference = self.get_sig_figs(output) - lowest_sig_figs
-
-        # Remove sig figs
-        if sig_fig_difference > 0:
-            output = str(output)[:lowest_sig_figs + 1]
-        # Add sig figs
-        elif sig_fig_difference < 0:
-            output = str(output) + "."
-            for i in range(-sig_fig_difference):
-                output = str(output) + "0"
 
         return output
 
@@ -176,36 +211,7 @@ class Input(threading.Thread):
         formatted_compound = self.format_compound(compound)
         print(formatted_compound + " systematic name:")
         systematic_name = ""
-        atomic_list = []
-        order = []
-        for polyatomic_ion in self.polyatomic_ions["ions"]:
-            if polyatomic_ion["symbol"] in compound:
-                subscript = re.sub("[^0-9]", "", re.search("[(]*" + polyatomic_ion["symbol"] + "[)]*[0-9]*", compound).group())
-                if subscript == "":
-                    subscript = "1"
-                index = re.sub("[^A-Z]", "", compound).index(re.sub("[^A-Z]", "", polyatomic_ion["symbol"]))
-                atomic_list.append({"symbol": polyatomic_ion["symbol"], "name": polyatomic_ion["name"].lower(),
-                                    "subscript": int(subscript), "charge": polyatomic_ion["charge"],
-                                    "category": "polyatomic ion", "index": index})
-                compound = compound.replace(polyatomic_ion["symbol"], "")
-                order.append(index)
-        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
-        for element_string in element_string_list:
-            symbol = re.sub("[^A-Za-z]", "", element_string)
-            subscript = re.sub("[^0-9]", "", element_string)
-            if subscript == "":
-                subscript = "1"
-            for element in self.periodic_table["elements"]:
-                if element["symbol"] == symbol:
-                    charge = 0
-                    if element["xpos"] >= 15:
-                        charge = element["xpos"] - 18
-                    elif element["xpos"] <= 2:
-                        charge = element["xpos"]
-                    index = re.sub("[^A-Z]", "", compound).index(re.sub("[^A-Z]", "", symbol))
-                    atomic_list.append({"symbol": symbol, "name": element["name"].lower(), "prefix": "", "suffix": "", "subscript": int(subscript), "charge": int(charge), "category": element["category"], "index": index})
-                    order.append(index)
-        atomic_list = [atomic_list[i] for i in order]
+        atomic_list = self.process_compound(compound)
 
         not_metal = 0
         metal = 0
@@ -239,10 +245,52 @@ class Input(threading.Thread):
                     systematic_name = str(systematic_name) + element["name"] + " "
         return systematic_name
 
+    def get_mass_percent(self, elements, compound):
+        molar_mass_dict = []
+        for element in elements:
+            string = re.search("[(]*" + element + "[0-9]*[)]*[0-9]*", compound)
+            molar_mass_dict.append({"symbol": element, "molar_mass": self.get_molar_mass(string, False)})
+
+    def process_compound(self, compound):
+        atomic_list = []
+
+        split_compound = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
+        for string in split_compound:
+            element_string_list = re.findall("[A-Z][a-z]?[0-9]*", string)
+            if len(element_string_list) > 1:
+                p_subscript = re.sub("[^0-9]", "", re.search("[(].*?[)][0-9]*", string).group())
+                if p_subscript == "":
+                    p_subscript = "1"
+                for polyatomic_ion in self.polyatomic_ions["ions"]:
+                    if polyatomic_ion["symbol"] in string:
+                        atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
+                                            "name": polyatomic_ion["name"].lower(),
+                                            "subscript": int(p_subscript), "charge": polyatomic_ion["charge"],
+                                            "category": "polyatomic ion"})
+            else:
+                for element_string in element_string_list:
+                    symbol = re.sub("[^A-Za-z]", "", element_string)
+                    subscript = re.sub("[^0-9]", "", element_string)
+                    if subscript == "":
+                        subscript = "1"
+
+                    for element in self.periodic_table["elements"]:
+                        if element["symbol"] == symbol:
+                            charge = 0
+                            if element["xpos"] >= 15:
+                                charge = element["xpos"] - 18
+                            elif element["xpos"] <= 2:
+                                charge = element["xpos"]
+                            atomic_list.append(
+                                {"raw_string": element_string, "symbol": symbol, "name": element["name"].lower(),
+                                 "prefix": "", "suffix": "",
+                                 "subscript": int(subscript), "charge": int(charge),
+                                 "category": element["category"]})
+        return atomic_list
+
     def format_compound(self, compound):
         element_string_list = re.findall("[(]*[A-Z][a-z]?[0-9]*[)]*[0-9]*", compound)
-        print(element_string_list)
-        formatted_compound = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]", compound).group())
+        formatted_compound = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]|[0-9]*[(]", compound).group())
         for element_string in element_string_list:
             formatted_compound = formatted_compound + self.translate_text(element_string, "f_subscript")
         return formatted_compound
