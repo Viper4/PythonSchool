@@ -240,7 +240,8 @@ class Input(threading.Thread):
         return systematic_name
 
     def format_compound(self, compound):
-        element_string_list = re.findall("[A-Z][a-z]?[0-9]*", compound)
+        element_string_list = re.findall("[(]*[A-Z][a-z]?[0-9]*[)]*[0-9]*", compound)
+        print(element_string_list)
         formatted_compound = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]", compound).group())
         for element_string in element_string_list:
             formatted_compound = formatted_compound + self.translate_text(element_string, "f_subscript")
