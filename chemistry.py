@@ -1,7 +1,6 @@
 import json
 import re
 import time
-import urllib.request
 
 
 class Program:
@@ -11,17 +10,14 @@ class Program:
         self.lastResult = ""
         self.showWork = True
 
-        periodic_table_url = urllib.request.urlopen(
-            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
-        self.periodic_table = json.load(periodic_table_url)
+        with open("periodic_table.json", encoding='utf-8') as file:
+            self.periodic_table = json.load(file)
 
-        prefixes_suffixes_url = urllib.request.urlopen(
-            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
-        self.prefixes_suffixes = json.load(prefixes_suffixes_url)
+        with open("prefixes_suffixes.json", encoding='utf-8') as file:
+            self.prefixes_suffixes = json.load(file)
 
-        polyatomic_ions_url = urllib.request.urlopen(
-            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
-        self.polyatomic_ions = json.load(polyatomic_ions_url)
+        with open("polyatomic_ions.json", encoding='utf-8') as file:
+            self.polyatomic_ions = json.load(file)
 
         print("chemistry: Active")
 
