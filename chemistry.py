@@ -1,13 +1,12 @@
 import json
 import re
+import time
 import urllib.request
-from pynput.keyboard import Controller, Listener, KeyCode, Key
 
 
-class Input:
+class Program:
     def __init__(self):
         super().__init__()
-        self.inputString = ""
         self.calcMode = ""
         self.lastResult = ""
         self.showWork = True
@@ -29,77 +28,76 @@ class Input:
 
         print("chemistry: Active")
 
-    def calculate(self):
-        self.inputString = str(input())
-        if "show work" in self.inputString or "sw" in self.inputString:
+    def calculate(self, inputString):
+        if "show work" in inputString or "sw" in inputString:
             self.showWork = not self.showWork
             print("Show work: " + str(self.showWork))
-            re.sub("show work|sw", "", self.inputString)
-        if self.inputString != "sw" and self.inputString != "show work":
-            if "get_molar_mass" in self.inputString or "gmm" in self.inputString:
+            re.sub("show work|sw", "", inputString)
+        if inputString != "sw" and inputString != "show work":
+            if "get_molar_mass" in inputString or "gmm" in inputString:
                 print("get_molar_mass: Type compound Ex: 2NaHCO3")
                 self.calcMode = "get_molar_mass"
-            elif "get_element_info" in self.inputString or "gei" in self.inputString:
+            elif "get_element_info" in inputString or "gei" in inputString:
                 print("get_element_info: Type element")
                 self.calcMode = "get_element_info"
-            elif "moles_to_grams" in self.inputString or "mtg" in self.inputString:
+            elif "moles_to_grams" in inputString or "mtg" in inputString:
                 print("moles_to_grams: Types moles and formula Ex: 1.3 mol NaCl")
                 self.calcMode = "moles_to_grams"
-            elif "get_sig_figs" in self.inputString or "gsf" in self.inputString:
+            elif "get_sig_figs" in inputString or "gsf" in inputString:
                 print("get_sig_figs: Type number")
                 self.calcMode = "get_sig_figs"
-            elif "get_systematic_name" in self.inputString or "gsn" in self.inputString:
+            elif "get_systematic_name" in inputString or "gsn" in inputString:
                 print("get_systematic_name: Type formula Ex: Fe2O3")
                 self.calcMode = "get_systematic_name"
-            elif "get_mass_percent" in self.inputString or "gmp" in self.inputString:
+            elif "get_mass_percent" in inputString or "gmp" in inputString:
                 print("get_mass_percent: Type elements/molecules in compound Ex: H2 O in H2O")
                 self.calcMode = "get_mass_percent"
             else:
                 if self.calcMode == "get_molar_mass":
-                    molar_mass = str(self.get_molar_mass(self.inputString, False, self.showWork))
-                    print("get_molar_mass: " + self.translate_text(self.inputString, "f_subscript") + ": " + molar_mass)
+                    molar_mass = str(self.get_molar_mass(inputString, False, self.showWork))
+                    print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass)
                     self.lastResult = molar_mass
                 elif self.calcMode == "get_element_info":
                     for element in self.periodic_table["elements"]:
-                        if element["symbol"] == self.inputString or element["name"] == self.inputString:
+                        if element["symbol"] == inputString or element["name"] == inputString:
                             print(
                                 "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
                             for variable in element:
                                 if variable != "symbol" and variable != "name" and variable != "color":
                                     print(variable + ": " + str(element[str(variable)]))
-                    self.lastResult = self.inputString
+                    self.lastResult = inputString
                 elif self.calcMode == "moles_to_grams":
-                    formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", self.inputString)
-                    moles = re.sub(" mol ", "", re.sub(formula, "", self.inputString))
+                    formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
+                    moles = re.sub(" mol ", "", re.sub(formula, "", inputString))
                     grams = self.moles_to_grams(moles, formula, True, self.showWork)
                     print("moles_to_grams: " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
                     self.lastResult = grams
                 elif self.calcMode == "get_sig_figs":
-                    if self.inputString == "Last Result" or self.inputString == "LR":
+                    if inputString == "Last Result" or inputString == "LR":
                         result = str(self.get_sig_figs(self.lastResult))
                         print("get_sig_figs: " + self.lastResult + " -> " + result)
                     else:
-                        result = str(self.get_sig_figs(self.inputString))
-                        print("get_sig_figs: " + self.inputString + " -> " + result)
+                        result = str(self.get_sig_figs(inputString))
+                        print("get_sig_figs: " + inputString + " -> " + result)
                     self.lastResult = result
                 elif self.calcMode == "get_systematic_name":
-                    name = self.get_systematic_name(self.inputString, self.showWork)
+                    name = self.get_systematic_name(inputString, self.showWork)
                     print(
-                        "get_systematic_name: " + self.translate_text(self.inputString, "f_subscript") + " -> " + name)
-                    self.lastResult = self.inputString
+                        "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
+                    self.lastResult = inputString
                 elif self.calcMode == "get_mass_percent":
-                    split_string = self.inputString.split("in", 1)
+                    split_string = inputString.split("in", 1)
                     try:
                         elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
                         compound = re.sub("[ ]", "", split_string[1])
                     except IndexError:
                         elements = []
-                        compound = self.inputString
+                        compound = inputString
                     if len(elements) == 0:
                         elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
-                    print("get_mass_percent: " + self.translate_text(self.inputString, "f_subscript"))
+                    print("get_mass_percent: " + self.translate_text(inputString, "f_subscript"))
                     self.get_mass_percent(elements, compound, True, self.showWork)
-                    self.lastResult = self.inputString
+                    self.lastResult = inputString
 
     def get_molar_mass(self, formula, round_sig_figs, show_work):
         try:
@@ -409,25 +407,20 @@ class Input:
         return number
 
     def get_decimal_places(self, number):
-        split_string = str(number).split(".", 1)
         try:
-            decimal_places = len(split_string[1])
+            decimal_places = len(str(number).split(".", 1)[1])
         except IndexError:
             decimal_places = 0
         return decimal_places
 
 
-controller = Controller()
-inputClass = Input()
+running = True
+program = Program()
 
-
-def on_press(key):
-    if key == KeyCode(char=inputClass.settings["settings"]["exitKey"]):
-        print("chemistry: Exiting")
-        listener.stop()
-    elif key == Key.enter:
-        inputClass.calculate()
-
-
-with Listener(on_press=on_press) as listener:
-    listener.join()
+while running:
+    inputString = input()
+    if inputString.lower() == "exit" or inputString.lower() == "e":
+        running = False
+    else:
+        program.calculate(inputString)
+    time.sleep(0.1)
