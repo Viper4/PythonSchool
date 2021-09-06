@@ -1,6 +1,5 @@
 import json
 import re
-import decimal
 import urllib.request
 from pynput.keyboard import Controller, Listener, KeyCode, Key
 
@@ -12,16 +11,20 @@ class Input:
         self.calcMode = ""
         self.lastResult = ""
         self.showWork = True
-        settings_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/settings.json')
+        settings_url = urllib.request.urlopen(
+            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/settings.json')
         self.settings = json.load(settings_url)
 
-        periodic_table_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
+        periodic_table_url = urllib.request.urlopen(
+            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
         self.periodic_table = json.load(periodic_table_url)
 
-        prefixes_suffixes_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
+        prefixes_suffixes_url = urllib.request.urlopen(
+            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
         self.prefixes_suffixes = json.load(prefixes_suffixes_url)
 
-        polyatomic_ions_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
+        polyatomic_ions_url = urllib.request.urlopen(
+            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
         self.polyatomic_ions = json.load(polyatomic_ions_url)
 
         print("chemistry: Active")
@@ -81,12 +84,19 @@ class Input:
                     self.lastResult = result
                 elif self.calcMode == "get_systematic_name":
                     name = self.get_systematic_name(self.inputString, self.showWork)
-                    print("get_systematic_name: " + self.translate_text(self.inputString, "f_subscript") + " -> " + name)
+                    print(
+                        "get_systematic_name: " + self.translate_text(self.inputString, "f_subscript") + " -> " + name)
                     self.lastResult = self.inputString
                 elif self.calcMode == "get_mass_percent":
                     split_string = self.inputString.split("in", 1)
-                    elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
-                    compound = re.sub("[ ]", "", split_string[1])
+                    try:
+                        elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
+                        compound = re.sub("[ ]", "", split_string[1])
+                    except IndexError:
+                        elements = []
+                        compound = self.inputString
+                    if len(elements) == 0:
+                        elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
                     print("get_mass_percent: " + self.translate_text(self.inputString, "f_subscript"))
                     self.get_mass_percent(elements, compound, True, self.showWork)
                     self.lastResult = self.inputString
@@ -144,8 +154,7 @@ class Input:
         if len(results) > 1:
             total_molar_mass *= int(coefficient)
             if show_work:
-                print(formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(
-                    total_molar_mass))
+                print(formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(total_molar_mass))
             if round_sig_figs:
                 total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-", show_work)
         return total_molar_mass
@@ -163,13 +172,12 @@ class Input:
 
     def get_sig_figs(self, value):
         dot_index = str(value).rfind(".")
-
         if dot_index != -1:
             sig_figs_string = re.search("[1-9][0-9]*[.]*[0-9]*", str(value))
         else:
             sig_figs_string = re.search("[0-9]*[^0]", str(value))
 
-        if sig_figs_string != None:
+        if sig_figs_string is not None:
             sig_figs = len(re.sub("[^0-9]", "", sig_figs_string.group()))
         else:
             sig_figs = 0
@@ -182,39 +190,47 @@ class Input:
             if operation == "*/":
                 sig_figs = self.get_sig_figs(value)
             elif operation == "+-":
-                d = decimal.Decimal(str(value))
-                sig_figs = -d.as_tuple().exponent
+                sig_figs = self.get_decimal_places(value)
 
             if sig_figs < lowest_sig_figs:
                 lowest_sig_figs = sig_figs
 
         if operation == "*/":
-            d = decimal.Decimal(str(output))
-            decimal_places = -d.as_tuple().exponent
             out_sig_figs = self.get_sig_figs(output)
+            decimal_places = self.get_decimal_places(output)
             if decimal_places != 0:
                 output = round(self.shift_decimal_place(output, decimal_places, False), lowest_sig_figs - out_sig_figs)
                 output = self.shift_decimal_place(output, decimal_places, True)
             else:
                 output = round(output, lowest_sig_figs - out_sig_figs)
 
-            sig_fig_difference = self.get_sig_figs(output) - lowest_sig_figs
             # Remove sig figs
-            if sig_fig_difference > 0:
-                output = int(output)
+            while self.get_sig_figs(output) - lowest_sig_figs > 0:
+                if str(output).rfind(".") != -1:
+                    output = str(output)[:-1]
+                else:
+                    output = str(output)[:-1] + "0"
             # Add sig figs
-            elif sig_fig_difference < 0:
-                output = float(output)
+            while self.get_sig_figs(output) - lowest_sig_figs < 0:
+                if str(output).rfind(".") != -1:
+                    output = str(output) + "0"
+                else:
+                    output = str(output) + "."
         elif operation == "+-":
             output = round(output, lowest_sig_figs)
-            decimal_place_difference = -decimal.Decimal(str(output)).as_tuple().exponent - lowest_sig_figs
+
             # Remove decimals
-            if decimal_place_difference > 0:
-                output = round(output, lowest_sig_figs)
-            elif decimal_place_difference < 0:
-                output = str(output).ljust(-decimal_place_difference + len(str(output)), '0')
+            while self.get_decimal_places(output) - lowest_sig_figs > 0:
+                output = str(output)[:-1]
+            # Add decimals
+            while self.get_decimal_places(output) - lowest_sig_figs < 0:
+                if str(output).rfind(".") != -1:
+                    output = str(output) + "0"
+                else:
+                    output = str(output) + ".0"
         if show_work:
-            print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + " sig figs")
+            print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(
+                lowest_sig_figs) + " sig figs")
 
         return output
 
@@ -227,7 +243,8 @@ class Input:
         not_metal = 0
         metal = 0
         for element in atomic_list:
-            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in element["category"] or "polyatomic ion" in element["category"]:
+            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in \
+                    element["category"] or "polyatomic ion" in element["category"]:
                 not_metal += 1
             elif "metal" in element["category"]:
                 metal += 1
@@ -253,11 +270,12 @@ class Input:
                     charges = []
                     for i in range(1, len(atomic_list)):
                         charge += int(-(atomic_list[i]["charge"] * atomic_list[i]["subscript"]))
-                        charges.append("(" + str(atomic_list[i]["charge"]) + "*" + str(atomic_list[i]["subscript"]) + ")")
+                        charges.append(
+                            "(" + str(atomic_list[i]["charge"]) + "*" + str(atomic_list[i]["subscript"]) + ")")
 
                     if show_work:
                         text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + \
-                            " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
+                               " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
                             element["subscript"]) + " = " + str(charge)
                         print(text)
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
@@ -279,7 +297,8 @@ class Input:
                 if round_sig_figs:
                     mass_percent = self.round_sig_figs(mass_percent, [molar_mass, total_molar_mass], "*/", show_work)
                 if show_work:
-                    print(self.translate_text(element, "f_subscript") + "%: (" + str(molar_mass) + "/" + str(total_molar_mass) + ")*100 = " + str(mass_percent) + "%")
+                    print(self.translate_text(element, "f_subscript") + "%: (" + str(molar_mass) + "/" + str(
+                        total_molar_mass) + ")*100 = " + str(mass_percent) + "%")
                 else:
                     print(self.translate_text(element, "f_subscript") + "%: " + str(mass_percent) + "%")
 
@@ -388,6 +407,14 @@ class Input:
             else:
                 number *= 10
         return number
+
+    def get_decimal_places(self, number):
+        split_string = str(number).split(".", 1)
+        try:
+            decimal_places = len(split_string[1])
+        except IndexError:
+            decimal_places = 0
+        return decimal_places
 
 
 controller = Controller()
