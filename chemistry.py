@@ -10,9 +10,6 @@ class Program:
         self.calcMode = ""
         self.lastResult = ""
         self.showWork = True
-        settings_url = urllib.request.urlopen(
-            'https://raw.githubusercontent.com/Viper4/PythonSchool/master/settings.json')
-        self.settings = json.load(settings_url)
 
         periodic_table_url = urllib.request.urlopen(
             'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
