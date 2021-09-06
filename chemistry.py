@@ -48,7 +48,7 @@ class Program:
             else:
                 if self.calcMode == "get_molar_mass":
                     molar_mass = str(self.get_molar_mass(inputString, False, self.showWork))
-                    print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass)
+                    print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass + "g/mol")
                     self.lastResult = molar_mass
                 elif self.calcMode == "get_element_info":
                     for element in self.periodic_table["elements"]:
@@ -63,7 +63,7 @@ class Program:
                     formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
                     moles = re.sub(" mol ", "", re.sub(formula, "", inputString))
                     grams = self.moles_to_grams(moles, formula, True, self.showWork)
-                    print("moles_to_grams: " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
+                    print("moles_to_grams: " + moles + " mol " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
                     self.lastResult = grams
                 elif self.calcMode == "get_sig_figs":
                     if inputString == "Last Result" or inputString == "LR":
