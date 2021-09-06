@@ -3,6 +3,7 @@ import threading
 import json
 import re
 import decimal
+import urllib.request
 from pynput.keyboard import Controller, Listener, KeyCode, Key
 
 
@@ -19,14 +20,18 @@ class Input(threading.Thread):
         self.calcMode = ""
         self.lastResult = ""
         self.showWork = True
-        with open("settings.json", encoding='utf-8') as file:
-            self.settings = json.load(file)
-        with open("periodic_table.json", encoding='utf-8') as file:
-            self.periodic_table = json.load(file)
-        with open("prefixes_suffixes.json", encoding='utf-8') as file:
-            self.prefixes_suffixes = json.load(file)
-        with open("polyatomic_ions.json", encoding='utf-8') as file:
-            self.polyatomic_ions = json.load(file)
+        settings_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/settings.json')
+        self.settings = json.load(settings_url)
+
+        periodic_table_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
+        self.periodic_table = json.load(periodic_table_url)
+
+        prefixes_suffixes_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
+        self.prefixes_suffixes = json.load(prefixes_suffixes_url)
+
+        polyatomic_ions_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
+        self.polyatomic_ions = json.load(polyatomic_ions_url)
+
         print("chemistry: Active")
 
     def calculate(self):
@@ -252,9 +257,17 @@ class Input(threading.Thread):
                 print(formatted_compound + " is ionic")
             for element in atomic_list:
                 if element["category"] == "transition metal":
-                    charge = int(-(atomic_list[1]["charge"] * atomic_list[1]["subscript"]) / element["subscript"])
+                    charge = 0
+                    charges = []
+                    for i in range(1, len(atomic_list)):
+                        charge += int(-(atomic_list[i]["charge"] * atomic_list[i]["subscript"]))
+                        charges.append("(" + str(atomic_list[i]["charge"]) + "*" + str(atomic_list[i]["subscript"]) + ")")
+
                     if show_work:
-                        print(self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + str(atomic_list[1]["charge"]) + "*" + str(atomic_list[1]["subscript"]) + ")/" + str(element["subscript"]) + " = " + str(charge))
+                        text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + \
+                            " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
+                            element["subscript"]) + " = " + str(charge)
+                        print(text)
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
                     if element["category"] != "polyatomic ion" and atomic_list.index(element) != 0:
