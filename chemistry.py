@@ -9,6 +9,7 @@ class Program:
         self.calcMode = ""
         self.lastResult = ""
         self.showWork = True
+        self.inputPrompt = "Type command: "
 
         with open("periodic_table.json", encoding='utf-8') as file:
             self.periodic_table = json.load(file)
@@ -28,22 +29,28 @@ class Program:
             re.sub("show work|sw", "", inputString)
         if inputString != "sw" and inputString != "show work":
             if "get_molar_mass" in inputString or "gmm" in inputString:
-                print("get_molar_mass: Type compound Ex: 2NaHCO3")
+                print("Type a compound Ex. 2NaHCO3")
+                self.inputPrompt = "get_molar_mass: "
                 self.calcMode = "get_molar_mass"
             elif "get_element_info" in inputString or "gei" in inputString:
-                print("get_element_info: Type element")
+                print("Type a element")
+                self.inputPrompt = "get_element_info: "
                 self.calcMode = "get_element_info"
             elif "moles_to_grams" in inputString or "mtg" in inputString:
-                print("moles_to_grams: Types moles and formula Ex: 1.3 mol NaCl")
+                print("Type moles and formula Ex: 1.3 mol NaCl")
+                self.inputPrompt = "moles_to_grams: "
                 self.calcMode = "moles_to_grams"
             elif "get_sig_figs" in inputString or "gsf" in inputString:
-                print("get_sig_figs: Type number")
+                print("Type a number")
+                self.inputPrompt = "get_sig_figs: "
                 self.calcMode = "get_sig_figs"
             elif "get_systematic_name" in inputString or "gsn" in inputString:
-                print("get_systematic_name: Type formula Ex: Fe2O3")
+                print("Type formula Ex: Fe2O3")
+                self.inputPrompt = "get_systematic_name: "
                 self.calcMode = "get_systematic_name"
             elif "get_mass_percent" in inputString or "gmp" in inputString:
-                print("get_mass_percent: Type elements/molecules in compound Ex: H2 O in H2O")
+                print("Type elements/molecules in compound Ex: H2 O in H2O")
+                self.inputPrompt = "get_mass_percent: "
                 self.calcMode = "get_mass_percent"
             else:
                 if self.calcMode == "get_molar_mass":
@@ -411,7 +418,7 @@ running = True
 program = Program()
 
 while running:
-    inputString = input()
+    inputString = input(program.inputPrompt)
     if inputString.lower() == "exit" or inputString.lower() == "e":
         running = False
     else:
