@@ -151,7 +151,7 @@ class Program:
         return total_molar_mass
 
     def moles_to_grams(self, moles, formula, round_sig_figs, show_work):
-        molar_mass = self.get_molar_mass(formula, False, True)
+        molar_mass = self.get_molar_mass(formula, False, show_work)
         grams = float(moles) * molar_mass
         if show_work:
             print(moles + " mol " + self.translate_text(formula, "f_subscript") + " to grams:")
@@ -263,7 +263,7 @@ class Program:
                         charge += int(-(atomic_list[i]["charge"] * atomic_list[i]["subscript"]))
                         charges.append(
                             "(" + str(atomic_list[i]["charge"]) + "*" + str(atomic_list[i]["subscript"]) + ")")
-
+                    charge = int(charge / element["subscript"])
                     if show_work:
                         text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + \
                                " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
