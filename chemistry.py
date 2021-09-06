@@ -85,7 +85,7 @@ class Program:
                                     "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
                                 for variable in element:
                                     if variable != "symbol" and variable != "name" and variable != "color":
-                                        print(variable + ": " + str(element[str(variable)]))
+                                        print(" " + variable + ": " + str(element[str(variable)]))
                         self.lastResult = inputString
                     elif self.calcMode == "moles_to_grams":
                         formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
