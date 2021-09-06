@@ -33,76 +33,77 @@ class Input(threading.Thread):
         self.inputString = str(input())
         if "show work" in self.inputString or "sw" in self.inputString:
             self.showWork = not self.showWork
-            print(str(self.showWork))
+            print("Show work: " + str(self.showWork))
             re.sub("show work|sw", "", self.inputString)
-
-        if "get_molar_mass" in self.inputString or "gmm" in self.inputString:
-            print("get_molar_mass: Type compound Ex: 2NaHCO3")
-            self.calcMode = "get_molar_mass"
-        elif "get_element_info" in self.inputString or "gei" in self.inputString:
-            print("get_element_info: Type element")
-            self.calcMode = "get_element_info"
-        elif "moles_to_grams" in self.inputString or "mtg" in self.inputString:
-            print("moles_to_grams: Types moles and formula Ex: 1.3 mol NaCl")
-            self.calcMode = "moles_to_grams"
-        elif "get_sig_figs" in self.inputString or "gsf" in self.inputString:
-            print("get_sig_figs: Type number")
-            self.calcMode = "get_sig_figs"
-        elif "get_systematic_name" in self.inputString or "gsn" in self.inputString:
-            print("get_systematic_name: Type formula Ex: Fe2O3")
-            self.calcMode = "get_systematic_name"
-        elif "get_mass_percent" in self.inputString or "gmp" in self.inputString:
-            print("get_mass_percent: Type elements/molecules in compound Ex: H2 O in H2O")
-            self.calcMode = "get_mass_percent"
-        else:
-            if self.calcMode == "get_molar_mass":
-                molar_mass = str(self.get_molar_mass(self.inputString, False, self.showWork))
-                print("get_molar_mass: " + self.format_compound(self.inputString) + ": " + molar_mass)
-                self.lastResult = molar_mass
-            elif self.calcMode == "get_element_info":
-                for element in self.periodic_table["elements"]:
-                    if element["symbol"] == self.inputString or element["name"] == self.inputString:
-                        print("get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
-                        for variable in element:
-                            if variable != "symbol" and variable != "name" and variable != "color":
-                                print(variable + ": " + str(element[str(variable)]))
-                self.lastResult = self.inputString
-            elif self.calcMode == "moles_to_grams":
-                formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", self.inputString)
-                moles = re.sub(" mol ", "", re.sub(formula, "", self.inputString))
-                grams = self.moles_to_grams(moles, formula, True, self.showWork)
-                print("moles_to_grams: " + self.format_compound(formula) + " = " + grams + "g")
-                self.lastResult = grams
-            elif self.calcMode == "get_sig_figs":
-                if self.inputString == "Last Result" or self.inputString == "LR":
-                    result = str(self.get_sig_figs(self.lastResult))
-                    print("get_sig_figs: " + self.lastResult + " -> " + result)
-                else:
-                    result = str(self.get_sig_figs(self.inputString))
-                    print("get_sig_figs: " + self.inputString + " -> " + result)
-                self.lastResult = result
-            elif self.calcMode == "get_systematic_name":
-                name = self.get_systematic_name(self.inputString, self.showWork)
-                print("get_systematic_name: " + self.format_compound(self.inputString) + " -> " + name)
-                self.lastResult = self.inputString
-            elif self.calcMode == "get_mass_percent":
-                split_string = self.inputString.split("in", 1)
-                elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
-                compound = re.sub("[ ]", "", split_string[1])
-                print("get_mass_percent: " + self.translate_text(self.inputString, "f_subscript"))
-                self.get_mass_percent(elements, compound, True, self.showWork)
-                self.lastResult = self.inputString
+        if self.inputString != "sw" and self.inputString != "show work":
+            if "get_molar_mass" in self.inputString or "gmm" in self.inputString:
+                print("get_molar_mass: Type compound Ex: 2NaHCO3")
+                self.calcMode = "get_molar_mass"
+            elif "get_element_info" in self.inputString or "gei" in self.inputString:
+                print("get_element_info: Type element")
+                self.calcMode = "get_element_info"
+            elif "moles_to_grams" in self.inputString or "mtg" in self.inputString:
+                print("moles_to_grams: Types moles and formula Ex: 1.3 mol NaCl")
+                self.calcMode = "moles_to_grams"
+            elif "get_sig_figs" in self.inputString or "gsf" in self.inputString:
+                print("get_sig_figs: Type number")
+                self.calcMode = "get_sig_figs"
+            elif "get_systematic_name" in self.inputString or "gsn" in self.inputString:
+                print("get_systematic_name: Type formula Ex: Fe2O3")
+                self.calcMode = "get_systematic_name"
+            elif "get_mass_percent" in self.inputString or "gmp" in self.inputString:
+                print("get_mass_percent: Type elements/molecules in compound Ex: H2 O in H2O")
+                self.calcMode = "get_mass_percent"
+            else:
+                if self.calcMode == "get_molar_mass":
+                    molar_mass = str(self.get_molar_mass(self.inputString, False, self.showWork))
+                    print("get_molar_mass: " + self.translate_text(self.inputString, "f_subscript") + ": " + molar_mass)
+                    self.lastResult = molar_mass
+                elif self.calcMode == "get_element_info":
+                    for element in self.periodic_table["elements"]:
+                        if element["symbol"] == self.inputString or element["name"] == self.inputString:
+                            print(
+                                "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
+                            for variable in element:
+                                if variable != "symbol" and variable != "name" and variable != "color":
+                                    print(variable + ": " + str(element[str(variable)]))
+                    self.lastResult = self.inputString
+                elif self.calcMode == "moles_to_grams":
+                    formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", self.inputString)
+                    moles = re.sub(" mol ", "", re.sub(formula, "", self.inputString))
+                    grams = self.moles_to_grams(moles, formula, True, self.showWork)
+                    print("moles_to_grams: " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
+                    self.lastResult = grams
+                elif self.calcMode == "get_sig_figs":
+                    if self.inputString == "Last Result" or self.inputString == "LR":
+                        result = str(self.get_sig_figs(self.lastResult))
+                        print("get_sig_figs: " + self.lastResult + " -> " + result)
+                    else:
+                        result = str(self.get_sig_figs(self.inputString))
+                        print("get_sig_figs: " + self.inputString + " -> " + result)
+                    self.lastResult = result
+                elif self.calcMode == "get_systematic_name":
+                    name = self.get_systematic_name(self.inputString, self.showWork)
+                    print("get_systematic_name: " + self.translate_text(self.inputString, "f_subscript") + " -> " + name)
+                    self.lastResult = self.inputString
+                elif self.calcMode == "get_mass_percent":
+                    split_string = self.inputString.split("in", 1)
+                    elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
+                    compound = re.sub("[ ]", "", split_string[1])
+                    print("get_mass_percent: " + self.translate_text(self.inputString, "f_subscript"))
+                    self.get_mass_percent(elements, compound, True, self.showWork)
+                    self.lastResult = self.inputString
 
     def get_molar_mass(self, formula, round_sig_figs, show_work):
         try:
-            coefficient = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]|[0-9]*[(]", formula).group())
+            coefficient = re.match("^.*?[0-9]*", formula).group()
         except AttributeError:
             coefficient = "1"
         if coefficient == "":
             coefficient = "1"
         total_molar_mass = 0.0
         results = []
-        formatted_compound = self.format_compound(formula)
+        formatted_compound = self.translate_text(formula, "f_subscript")
         if show_work:
             print(formatted_compound + " molar mass:")
 
@@ -203,10 +204,10 @@ class Input(threading.Thread):
             sig_fig_difference = self.get_sig_figs(output) - lowest_sig_figs
             # Remove sig figs
             if sig_fig_difference > 0:
-                output = str(output)[:lowest_sig_figs + 1]
+                output = int(output)
             # Add sig figs
             elif sig_fig_difference < 0:
-                output = int(output)
+                output = float(output)
         elif operation == "+-":
             output = round(output, lowest_sig_figs)
             decimal_place_difference = -decimal.Decimal(str(output)).as_tuple().exponent - lowest_sig_figs
@@ -216,12 +217,12 @@ class Input(threading.Thread):
             elif decimal_place_difference < 0:
                 output = str(output).ljust(-decimal_place_difference + len(str(output)), '0')
         if show_work:
-            print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + "")
+            print("round_sig_figs (" + operation + "): " + str(values)[1:-1].replace("'", "") + " -> " + str(lowest_sig_figs) + " sig figs")
 
         return output
 
     def get_systematic_name(self, compound, show_work):
-        formatted_compound = self.format_compound(compound)
+        formatted_compound = self.translate_text(compound, "f_subscript")
         print(formatted_compound + " systematic name:")
         systematic_name = ""
         atomic_list = self.process_compound(compound)
@@ -314,13 +315,6 @@ class Input(threading.Thread):
                                  "category": element["category"]})
         return atomic_list
 
-    def format_compound(self, compound):
-        element_string_list = re.findall("[(]*[A-Z][a-z]?[0-9]*[)]*[0-9]*", compound)
-        formatted_compound = re.sub("[^0-9]", "", re.match("[0-9]*[A-Z]|[0-9]*[(]", compound).group())
-        for element_string in element_string_list:
-            formatted_compound = formatted_compound + self.translate_text(element_string, "f_subscript")
-        return formatted_compound
-
     def translate_text(self, text, translation):
         normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()"
         numbers = "0123456789"
@@ -333,11 +327,9 @@ class Input(threading.Thread):
         if translation == "subscript":
             return text.translate(subscript)
         elif translation == "f_subscript":
-            subscript_number = re.sub("[^0-9]", "", text)
-            if len(subscript_number) == 1:
-                return re.sub("[0-9]", "", text) + (subscript_number.translate(f_subscript)).replace("₁", "")
-            return re.sub("[0-9]", "", text) + subscript_number.translate(f_subscript)
-
+            coefficient = re.match("^.*?[0-9]*", text).group()
+            compound = re.search("[A-Z](.*)+", text).group()
+            return coefficient + (compound.translate(f_subscript)).replace("₁", "")
         elif translation == "superscript":
             return text.translate(superscript)
         elif translation == "f_superscript":
