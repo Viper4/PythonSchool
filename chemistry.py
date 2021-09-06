@@ -1,5 +1,3 @@
-import time
-import threading
 import json
 import re
 import decimal
@@ -7,13 +5,7 @@ import urllib.request
 from pynput.keyboard import Controller, Listener, KeyCode, Key
 
 
-def tap(key, release_delay):
-    controller.press(key)
-    time.sleep(release_delay)
-    controller.release(key)
-
-
-class Input(threading.Thread):
+class Input:
     def __init__(self):
         super().__init__()
         self.inputString = ""
@@ -397,23 +389,17 @@ class Input(threading.Thread):
                 number *= 10
         return number
 
-    def exit(self):
-        print("chemistry: Exiting")
-
 
 controller = Controller()
-inputThread = Input()
-inputThread.start()
+inputClass = Input()
 
 
 def on_press(key):
-    global inputThread
-
-    if key == KeyCode(char=inputThread.settings["settings"]["exitKey"]):
-        inputThread.exit()
+    if key == KeyCode(char=inputClass.settings["settings"]["exitKey"]):
+        print("chemistry: Exiting")
         listener.stop()
     elif key == Key.enter:
-        inputThread.calculate()
+        inputClass.calculate()
 
 
 with Listener(on_press=on_press) as listener:
