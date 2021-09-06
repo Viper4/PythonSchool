@@ -124,7 +124,7 @@ class Program:
                     results.append(p_molar_mass)
                     total_molar_mass += p_molar_mass
                 if show_work:
-                    print(formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
+                    print(" " + formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
                         p_molar_mass))
             else:
                 for element_string in element_string_list:
@@ -140,12 +140,12 @@ class Program:
                             results.append(molar_mass)
                             total_molar_mass += molar_mass
                             if show_work:
-                                print(self.translate_text(element_string, "f_subscript") + ": " + str(
+                                print(" " + self.translate_text(element_string, "f_subscript") + ": " + str(
                                     atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
         if len(results) > 1:
             total_molar_mass *= int(coefficient)
             if show_work:
-                print(formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(total_molar_mass))
+                print(" " + formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(total_molar_mass))
             if round_sig_figs:
                 total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-", show_work)
         return total_molar_mass
@@ -154,8 +154,8 @@ class Program:
         molar_mass = self.get_molar_mass(formula, False, True)
         grams = float(moles) * molar_mass
         if show_work:
-            print(moles + " mol " + formula + " to grams:")
-            print(moles + "*" + str(molar_mass) + " = " + str(grams))
+            print(moles + " mol " + self.translate_text(formula, "f_subscript") + " to grams:")
+            print(" " + moles + "*" + str(molar_mass) + " = " + str(grams))
         if round_sig_figs:
             grams = self.round_sig_figs(grams, [moles, molar_mass], "*/", show_work)
 
@@ -240,10 +240,10 @@ class Program:
             elif "metal" in element["category"]:
                 metal += 1
             if show_work:
-                print(element["symbol"] + " is a " + element["category"])
+                print(" " + element["symbol"] + " is a " + element["category"])
         if metal == 0:
             if show_work:
-                print(formatted_compound + " is covalent")
+                print(" " + formatted_compound + " is covalent")
             for element in atomic_list:
                 if atomic_list.index(element) != 0:
                     syllables = self.syllables(element["name"])
@@ -254,7 +254,7 @@ class Program:
                 systematic_name = str(systematic_name) + element["prefix"] + element["name"] + " "
         elif metal >= 1 and not_metal >= 1:
             if show_work:
-                print(formatted_compound + " is ionic")
+                print(" " + formatted_compound + " is ionic")
             for element in atomic_list:
                 if element["category"] == "transition metal":
                     charge = 0
@@ -268,7 +268,7 @@ class Program:
                         text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + \
                                " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
                             element["subscript"]) + " = " + str(charge)
-                        print(text)
+                        print(" " + text)
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
                     if element["category"] != "polyatomic ion" and atomic_list.index(element) != 0:
