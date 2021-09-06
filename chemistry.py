@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import urllib.request
 
 
 class Program:
@@ -10,15 +11,34 @@ class Program:
         self.lastResult = ""
         self.showWork = True
         self.inputPrompt = "Type command: "
+        valid_response = False
+        loadLocal = input("Load files locally? Y/N: ")
 
-        with open("periodic_table.json", encoding='utf-8') as file:
-            self.periodic_table = json.load(file)
+        while not valid_response:
+            if loadLocal.lower() == "y":
+                with open("periodic_table.json", encoding='utf-8') as file:
+                    self.periodic_table = json.load(file)
+                with open("prefixes_suffixes.json", encoding='utf-8') as file:
+                    self.prefixes_suffixes = json.load(file)
+                with open("polyatomic_ions.json", encoding='utf-8') as file:
+                    self.polyatomic_ions = json.load(file)
+                valid_response = True
+            elif loadLocal.lower() == "n":
+                periodic_table_url = urllib.request.urlopen(
+                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
+                self.periodic_table = json.load(periodic_table_url)
 
-        with open("prefixes_suffixes.json", encoding='utf-8') as file:
-            self.prefixes_suffixes = json.load(file)
+                prefixes_suffixes_url = urllib.request.urlopen(
+                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
+                self.prefixes_suffixes = json.load(prefixes_suffixes_url)
 
-        with open("polyatomic_ions.json", encoding='utf-8') as file:
-            self.polyatomic_ions = json.load(file)
+                polyatomic_ions_url = urllib.request.urlopen(
+                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
+                self.polyatomic_ions = json.load(polyatomic_ions_url)
+                valid_response = True
+            else:
+                loadLocal = input("Invalid response, type Y or N: ")
+            time.sleep(0.1)
 
         print("chemistry: Active")
 
@@ -53,51 +73,56 @@ class Program:
                 self.inputPrompt = "get_mass_percent: "
                 self.calcMode = "get_mass_percent"
             else:
-                if self.calcMode == "get_molar_mass":
-                    molar_mass = str(self.get_molar_mass(inputString, False, self.showWork))
-                    print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass + "g/mol")
-                    self.lastResult = molar_mass
-                elif self.calcMode == "get_element_info":
-                    for element in self.periodic_table["elements"]:
-                        if element["symbol"] == inputString or element["name"] == inputString:
-                            print(
-                                "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
-                            for variable in element:
-                                if variable != "symbol" and variable != "name" and variable != "color":
-                                    print(variable + ": " + str(element[str(variable)]))
-                    self.lastResult = inputString
-                elif self.calcMode == "moles_to_grams":
-                    formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
-                    moles = re.sub(" mol ", "", re.sub(formula, "", inputString))
-                    grams = self.moles_to_grams(moles, formula, True, self.showWork)
-                    print("moles_to_grams: " + moles + " mol " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
-                    self.lastResult = grams
-                elif self.calcMode == "get_sig_figs":
-                    if inputString == "Last Result" or inputString == "LR":
-                        result = str(self.get_sig_figs(self.lastResult))
-                        print("get_sig_figs: " + self.lastResult + " -> " + result)
+                try:
+                    if self.calcMode == "get_molar_mass":
+                        molar_mass = str(self.get_molar_mass(inputString, False, self.showWork))
+                        print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass + "g/mol")
+                        self.lastResult = molar_mass
+                    elif self.calcMode == "get_element_info":
+                        for element in self.periodic_table["elements"]:
+                            if element["symbol"] == inputString or element["name"] == inputString:
+                                print(
+                                    "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
+                                for variable in element:
+                                    if variable != "symbol" and variable != "name" and variable != "color":
+                                        print(variable + ": " + str(element[str(variable)]))
+                        self.lastResult = inputString
+                    elif self.calcMode == "moles_to_grams":
+                        formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
+                        moles = re.sub(" mol ", "", re.sub(formula, "", inputString))
+                        grams = self.moles_to_grams(moles, formula, True, self.showWork)
+                        print("moles_to_grams: " + moles + " mol " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
+                        self.lastResult = grams
+                    elif self.calcMode == "get_sig_figs":
+                        if inputString == "Last Result" or inputString == "LR":
+                            result = str(self.get_sig_figs(self.lastResult))
+                            print("get_sig_figs: " + self.lastResult + " -> " + result)
+                        else:
+                            result = str(self.get_sig_figs(inputString))
+                            print("get_sig_figs: " + inputString + " -> " + result)
+                        self.lastResult = result
+                    elif self.calcMode == "get_systematic_name":
+                        name = self.get_systematic_name(inputString, self.showWork)
+                        print(
+                            "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
+                        self.lastResult = inputString
+                    elif self.calcMode == "get_mass_percent":
+                        split_string = inputString.split("in", 1)
+                        try:
+                            elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
+                            compound = re.sub("[ ]", "", split_string[1])
+                        except IndexError:
+                            elements = []
+                            compound = inputString
+                        if len(elements) == 0:
+                            elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
+                        print("get_mass_percent: " + self.translate_text(inputString, "f_subscript"))
+                        self.get_mass_percent(elements, compound, True, self.showWork)
+                        self.lastResult = inputString
                     else:
-                        result = str(self.get_sig_figs(inputString))
-                        print("get_sig_figs: " + inputString + " -> " + result)
-                    self.lastResult = result
-                elif self.calcMode == "get_systematic_name":
-                    name = self.get_systematic_name(inputString, self.showWork)
-                    print(
-                        "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
-                    self.lastResult = inputString
-                elif self.calcMode == "get_mass_percent":
-                    split_string = inputString.split("in", 1)
-                    try:
-                        elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", split_string[0])
-                        compound = re.sub("[ ]", "", split_string[1])
-                    except IndexError:
-                        elements = []
-                        compound = inputString
-                    if len(elements) == 0:
-                        elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
-                    print("get_mass_percent: " + self.translate_text(inputString, "f_subscript"))
-                    self.get_mass_percent(elements, compound, True, self.showWork)
-                    self.lastResult = inputString
+                        print("chemistry: Unknown command")
+                except AttributeError:
+                    print(self.calcMode + ": '" + inputString + "' is invalid")
 
     def get_molar_mass(self, formula, round_sig_figs, show_work):
         try:
@@ -117,10 +142,10 @@ class Program:
             element_string_list = re.findall("[A-Z][a-z]?[0-9]*", string)
             if len(element_string_list) > 1:
                 formatted_polyatomic = self.translate_text(string, "f_subscript")
-                p_subscript = re.sub("[^0-9]", "", re.search("[(].*?[)][0-9]*", string).group())
+                p_subscript = re.sub("[^0-9]", "", re.search("[)][0-9]*", string).group())
                 if p_subscript == "":
                     p_subscript = "1"
-                p_atomic_mass = self.get_molar_mass(re.sub("[()0-9]", "", string), False, False)
+                p_atomic_mass = self.get_molar_mass(re.sub("[()][0-9]*", "", string), False, False)
 
                 if len(split_compound) == 1:
                     p_molar_mass = int(coefficient) * p_atomic_mass * int(p_subscript)
@@ -312,10 +337,22 @@ class Program:
                     p_subscript = "1"
                 for polyatomic_ion in self.polyatomic_ions["ions"]:
                     if polyatomic_ion["symbol"] in string:
-                        atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
-                                            "name": polyatomic_ion["name"].lower(),
-                                            "subscript": int(p_subscript), "charge": polyatomic_ion["charge"],
-                                            "category": "polyatomic ion"})
+                        append = False
+                        for item in atomic_list:
+                            if item["raw_string"] in string:
+                                if len(polyatomic_ion["symbol"]) > len(item["symbol"]):
+                                    atomic_list.remove(item)
+                                    append = True
+                                else:
+                                    append = False
+                            else:
+                                append = True
+                        if append:
+                            atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
+                                                "name": polyatomic_ion["name"].lower(),
+                                                "subscript": int(p_subscript),
+                                                "charge": polyatomic_ion["charge"],
+                                                "category": "polyatomic ion"})
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
@@ -350,7 +387,7 @@ class Program:
             return text.translate(subscript)
         elif translation == "f_subscript":
             coefficient = re.match("^.*?[0-9]*", text).group()
-            compound = re.search("[A-Z](.*)+", text).group()
+            compound = re.search("[(]*[A-Z](.*)+", text).group()
             return coefficient + (compound.translate(f_subscript)).replace("₁", "")
         elif translation == "superscript":
             return text.translate(superscript)
