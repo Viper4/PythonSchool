@@ -12,10 +12,10 @@ class Program:
         self.showWork = True
         self.inputPrompt = "Type command: "
         valid_response = False
-        loadLocal = input("Load files locally? Y/N: ")
+        local_prompt = input("Load files locally? Y/N: ")
 
         while not valid_response:
-            if loadLocal.lower() == "y":
+            if local_prompt.lower() == "y":
                 with open("periodic_table.json", encoding='utf-8') as file:
                     self.periodic_table = json.load(file)
                 with open("prefixes_suffixes.json", encoding='utf-8') as file:
@@ -23,7 +23,7 @@ class Program:
                 with open("polyatomic_ions.json", encoding='utf-8') as file:
                     self.polyatomic_ions = json.load(file)
                 valid_response = True
-            elif loadLocal.lower() == "n":
+            elif local_prompt.lower() == "n":
                 periodic_table_url = urllib.request.urlopen(
                     'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
                 self.periodic_table = json.load(periodic_table_url)
@@ -37,7 +37,7 @@ class Program:
                 self.polyatomic_ions = json.load(polyatomic_ions_url)
                 valid_response = True
             else:
-                loadLocal = input("Invalid response, type Y or N: ")
+                local_prompt = input("Invalid response, type Y or N: ")
             time.sleep(0.1)
 
         print("chemistry: Active")
@@ -49,7 +49,7 @@ class Program:
             re.sub("show work|sw", "", inputString)
         if inputString != "sw" and inputString != "show work":
             if "get_molar_mass" in inputString or "gmm" in inputString:
-                print("Type a compound Ex. 2NaHCO3")
+                print("Type a compound Ex: 2NaHCO3")
                 self.inputPrompt = "get_molar_mass: "
                 self.calcMode = "get_molar_mass"
             elif "get_element_info" in inputString or "gei" in inputString:
@@ -72,6 +72,10 @@ class Program:
                 print("Type elements/molecules in compound Ex: H2 O in H2O")
                 self.inputPrompt = "get_mass_percent: "
                 self.calcMode = "get_mass_percent"
+            elif "balance_equation" in inputString or "be" in inputString:
+                print("Type chemical equation Ex: C5H12 + O2 -> CO2 + H2O")
+                self.inputPrompt = "balance_equation: "
+                self.calcMode = "balance_equation"
             else:
                 try:
                     if self.calcMode == "get_molar_mass":
@@ -119,6 +123,8 @@ class Program:
                         print("get_mass_percent: " + self.translate_text(inputString, "f_subscript"))
                         self.get_mass_percent(elements, compound, True, self.showWork)
                         self.lastResult = inputString
+                    elif self.calcMode == "balance_equation":
+                        self.balance_equation(inputString)
                     else:
                         print("chemistry: Unknown command")
                 except AttributeError:
@@ -324,6 +330,66 @@ class Program:
                         total_molar_mass) + ")*100 = " + str(mass_percent) + "%")
                 else:
                     print(self.translate_text(element, "f_subscript") + "%: " + str(mass_percent) + "%")
+
+    def balance_equation(self, equation):
+        split_equation = str(equation).split("->", 1)
+        reactants = split_equation[0].split("+")
+        products = split_equation[1].split("+")
+        reactant_dict_list = []
+        reactant_dict = {}
+        for reactant in reactants:
+            try:
+                coefficient = re.match("^.*?[0-9]*", reactant).group()
+            except AttributeError:
+                coefficient = "1"
+            if coefficient == "":
+                coefficient = "1"
+            atomic_list = self.process_compound(reactant)
+            for item in atomic_list:
+                reactant_dict_list.append({"coefficient": int(coefficient), "compound": reactant, "symbol": item["symbol"], "subscript": item["subscript"], "amount": item["subscript"] * int(coefficient)})
+        for reactant_a in reactant_dict_list:
+            if reactant_a["symbol"] in reactant_dict:
+                reactant_dict[reactant_a["symbol"]] += reactant_a["amount"]
+            else:
+                reactant_dict[reactant_a["symbol"]] = reactant_a["amount"]
+        product_dict_list = []
+        product_dict = {}
+        for product in products:
+            try:
+                coefficient = re.match("^.*?[0-9]*", product).group()
+            except AttributeError:
+                coefficient = "1"
+            if coefficient == "":
+                coefficient = "1"
+            atomic_list = self.process_compound(product)
+            for item in atomic_list:
+                product_dict_list.append({"coefficient": int(coefficient), "compound": product, "symbol": item["symbol"], "subscript": item["subscript"], "amount": item["subscript"] * int(coefficient)})
+        for product_a in product_dict_list:
+            if product_a["symbol"] in product_dict:
+                product_dict[product_a["symbol"]] += product_a["amount"]
+            else:
+                product_dict[product_a["symbol"]] = product_a["amount"]
+
+        for r_dict in reactant_dict_list:
+            for p_dict in product_dict_list:
+                if r_dict["amount"] != p_dict["amount"]:
+                    if reactant_dict[r_dict["symbol"]] > product_dict[r_dict["symbol"]]:
+                        if r_dict["symbol"] == p_dict["symbol"]:
+                            multiplier = r_dict["amount"] / p_dict["amount"]
+                            p_dict["compound"] = str(multiplier * p_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", p_dict["compound"]).group()
+                            p_dict["amount"] = multiplier * p_dict["coefficient"] * p_dict["subscript"]
+                            product_dict[p_dict["symbol"]] = p_dict["amount"]
+                            print(str(p_dict["compound"]) + " " + str(p_dict["amount"]) + " p")
+                    elif reactant_dict[r_dict["symbol"]] < product_dict[r_dict["symbol"]]:
+                        if p_dict["symbol"] == r_dict["symbol"]:
+                            print(str(p_dict["amount"]) + " " + str(r_dict["amount"]))
+                            multiplier = p_dict["amount"] / r_dict["amount"]
+                            r_dict["compound"] = str(multiplier * r_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", r_dict["compound"]).group()
+                            r_dict["amount"] = multiplier * r_dict["coefficient"] * r_dict["subscript"]
+                            reactant_dict[r_dict["symbol"]] = r_dict["amount"]
+                            print(str(r_dict["compound"]) + " " + str(r_dict["amount"]) + " r")
+
+        print(str(reactant_dict) + "\n" + str(product_dict))
 
     def process_compound(self, compound):
         atomic_list = []
