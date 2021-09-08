@@ -18,36 +18,38 @@ class Program:
             if local_prompt.lower() == "y":
                 with open("periodic_table.json", encoding='utf-8') as file:
                     self.periodic_table = json.load(file)
-                with open("prefixes_suffixes.json", encoding='utf-8') as file:
-                    self.prefixes_suffixes = json.load(file)
                 with open("polyatomic_ions.json", encoding='utf-8') as file:
                     self.polyatomic_ions = json.load(file)
+                with open("prefixes_suffixes.json", encoding='utf-8') as file:
+                    self.prefixes_suffixes = json.load(file)
+                with open("command_list.json", encoding='utf-8') as file:
+                    self.command_list = json.load(file)
                 valid_response = True
             elif local_prompt.lower() == "n":
-                periodic_table_url = urllib.request.urlopen(
-                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
+                periodic_table_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
                 self.periodic_table = json.load(periodic_table_url)
 
-                prefixes_suffixes_url = urllib.request.urlopen(
-                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
+                polyatomic_ions_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
+                self.polyatomic_ions = json.load(polyatomic_ions_url)
+
+                prefixes_suffixes_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
                 self.prefixes_suffixes = json.load(prefixes_suffixes_url)
 
-                polyatomic_ions_url = urllib.request.urlopen(
-                    'https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
-                self.polyatomic_ions = json.load(polyatomic_ions_url)
+                command_list_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/command_list.json')
+                self.command_list = json.load(command_list_url)
                 valid_response = True
             else:
                 local_prompt = input("Invalid response, type Y or N: ")
             time.sleep(0.1)
 
-        print("chemistry: Active")
+        print("chemistry: Active, '/e' to exit")
 
     def calculate(self, inputString):
-        if "show work" in inputString or "sw" in inputString:
+        if "show work" in inputString or "/sw" in inputString:
             self.showWork = not self.showWork
             print("Show work: " + str(self.showWork))
-            re.sub("show work|sw", "", inputString)
-        if inputString != "sw" and inputString != "show work":
+            re.sub("show work|/sw", "", inputString)
+        if inputString != "/sw" and inputString != "show work":
             if "get_molar_mass" in inputString or "gmm" in inputString:
                 print("Type a compound Ex: 2NaHCO3")
                 self.inputPrompt = "get_molar_mass: "
@@ -56,6 +58,10 @@ class Program:
                 print("Type a element")
                 self.inputPrompt = "get_element_info: "
                 self.calcMode = "get_element_info"
+            elif "get_polyatomic_info" in inputString or "gpi" in inputString:
+                print("Type a polyatomic")
+                self.inputPrompt = "get_polyatomic_info: "
+                self.calcMode = "get_polyatomic_info"
             elif "moles_to_grams" in inputString or "mtg" in inputString:
                 print("Type moles and formula Ex: 1.3 mol NaCl")
                 self.inputPrompt = "moles_to_grams: "
@@ -68,6 +74,10 @@ class Program:
                 print("Type formula Ex: Fe2O3")
                 self.inputPrompt = "get_systematic_name: "
                 self.calcMode = "get_systematic_name"
+            elif "get_chemical_formula" in inputString or "gcf" in inputString:
+                print("Type systematic name Ex: Iron(III) Oxide")
+                self.inputPrompt = "get_chemical_formula: "
+                self.calcMode = "get_chemical_formula"
             elif "get_mass_percent" in inputString or "gmp" in inputString:
                 print("Type elements/molecules in compound Ex: H2 O in H2O")
                 self.inputPrompt = "get_mass_percent: "
@@ -83,13 +93,44 @@ class Program:
                         print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass + "g/mol")
                         self.lastResult = molar_mass
                     elif self.calcMode == "get_element_info":
+                        split_string = inputString.split(" ", 1)
+                        element_string = split_string[0]
+                        try:
+                            variable = split_string[1]
+                        except IndexError:
+                            variable = ""
                         for element in self.periodic_table["elements"]:
-                            if element["symbol"] == inputString or element["name"] == inputString:
-                                print(
-                                    "get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
-                                for variable in element:
-                                    if variable != "symbol" and variable != "name" and variable != "color":
-                                        print(" " + variable + ": " + str(element[str(variable)]))
+                            if element["symbol"] == element_string or element["name"] == element_string:
+                                print("get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
+                                if variable == "" or variable.lower() == "all":
+                                    for var in element:
+                                        if var != "symbol" and var != "name":
+                                            print(" " + var + ": " + str(element[str(var)]))
+                                else:
+                                    if variable.lower() in element:
+                                        print(" " + variable.lower() + ": " + str(element[variable.lower()]))
+                                    else:
+                                        print(" '" + variable + "' does not exist")
+                        self.lastResult = inputString
+                    elif self.calcMode == "get_polyatomic_info":
+                        split_string = inputString.split(" ", 1)
+                        poly_string = split_string[0]
+                        try:
+                            variable = split_string[1]
+                        except IndexError:
+                            variable = ""
+                        for polyatomic in self.polyatomic_ions["ions"]:
+                            if polyatomic["symbol"] == poly_string or polyatomic["name"] == poly_string:
+                                print("get_polyatomic_info: " + polyatomic["symbol"] + " " + polyatomic["name"])
+                                if variable == "" or variable.lower() == "all":
+                                    for var in polyatomic:
+                                        if var != "symbol" and variable != "name" and var != "color":
+                                            print(" " + var + ": " + str(polyatomic[str(var)]))
+                                else:
+                                    if variable.lower() in polyatomic:
+                                        print(" " + variable.lower() + ": " + str(polyatomic[variable.lower()]))
+                                    else:
+                                        print(" '" + variable + "' does not exist")
                         self.lastResult = inputString
                     elif self.calcMode == "moles_to_grams":
                         formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
@@ -109,7 +150,11 @@ class Program:
                         name = self.get_systematic_name(inputString, self.showWork)
                         print(
                             "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
-                        self.lastResult = inputString
+                        self.lastResult = name
+                    elif self.calcMode == "get_chemical_formula":
+                        formula = self.get_chemical_formula(inputString, self.showWork)
+                        print("get_chemical_formula: " + formula)
+                        self.lastResult = formula
                     elif self.calcMode == "get_mass_percent":
                         split_string = inputString.split("in", 1)
                         try:
@@ -126,7 +171,7 @@ class Program:
                     elif self.calcMode == "balance_equation":
                         self.balance_equation(inputString)
                     else:
-                        print("chemistry: Unknown command")
+                        print("chemistry: Unknown command, type '/l' for a list of commands")
                 except AttributeError:
                     print(self.calcMode + ": '" + inputString + "' is invalid")
 
@@ -283,18 +328,20 @@ class Program:
             if show_work:
                 print(" " + formatted_compound + " is covalent")
             for element in atomic_list:
+                syllables = self.syllables(element["name"].lower())
+                element["prefix"] = self.prefixes_suffixes["prefixes"][element["subscript"] - 1]
+
                 if atomic_list.index(element) != 0:
-                    syllables = self.syllables(element["name"])
                     element["name"] = syllables[0] + "ide"
-                    element["prefix"] = self.prefixes_suffixes["prefixes"][element["f_subscript"] - 1]
-                    if element["prefix"] == "mono" and element["name"][0] == "o":
+                    if element["name"][0] == "o" and element["prefix"] == "mono":
                         element["prefix"] = "mon"
-                systematic_name = str(systematic_name) + element["prefix"] + element["name"] + " "
+
+                systematic_name = str(systematic_name) + (element["prefix"] + element["name"]).capitalize() + " "
         elif metal >= 1 and not_metal >= 1:
             if show_work:
                 print(" " + formatted_compound + " is ionic")
             for element in atomic_list:
-                if element["category"] == "transition metal":
+                if "transition metal" in element["category"]:
                     charge = 0
                     charges = []
                     for i in range(1, len(atomic_list)):
@@ -310,10 +357,42 @@ class Program:
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
                     if element["category"] != "polyatomic ion" and atomic_list.index(element) != 0:
-                        syllables = self.syllables(element["name"])
+                        syllables = self.syllables(element["name"].lower())
                         element["name"] = syllables[0] + "ide"
-                    systematic_name = str(systematic_name) + element["name"] + " "
+                    systematic_name += element["name"].capitalize() + " "
         return systematic_name
+
+    def get_chemical_formula(self, systematic_name, show_work):
+        formula = ""
+        names = str(systematic_name).split(" ")
+        atomic_list = []
+        for sys_name in names:
+            formatted_name = re.sub("[(].*?[)]", "", sys_name).replace("ide", "")
+            for element in self.periodic_table["elements"]:
+                if formatted_name.lower() in element["name"].lower():
+                    charge = element["charge"]
+                    if "(" in sys_name:
+                        charge = self.roman_to_int(re.sub("[()]", "", re.search("[(].*?[)]", sys_name).group()))
+                    atomic_list.append({"sys_name": sys_name, "symbol": element["symbol"], "category": element["category"], "charge": charge})
+            for polyatomic_ion in self.polyatomic_ions["ions"]:
+                if polyatomic_ion["name"].lower() in sys_name.lower():
+                    atomic_list.append({"sys_name": sys_name, "symbol": polyatomic_ion["symbol"], "category": "polyatomic_ion", "charge": polyatomic_ion["charge"]})
+        for item in atomic_list:
+            subscript = 0
+            if item["charge"] is not None:
+                index = atomic_list.index(item)
+                other_item = atomic_list[(len(atomic_list) - 1) - index]
+                subscript = abs(other_item["charge"])
+                if show_work:
+                    if other_item["charge"] > 0:
+                        other_item["charge"] = "+" + str(other_item["charge"])
+                    print(" Flip and drop: " + self.translate_text(other_item["symbol"] + str(other_item["charge"])[::-1], "f_superscript") + " -> " + self.translate_text(item["symbol"] + str(subscript), "f_subscript"))
+
+            if item["category"] == "polyatomic_ion" and subscript > 1:
+                formula += "(" + item["symbol"] + ")" + str(subscript)
+            else:
+                formula += item["symbol"] + str(subscript)
+        return self.translate_text(formula, "f_subscript")
 
     def get_mass_percent(self, elements, compound, round_sig_figs, show_work):
         total_molar_mass = self.get_molar_mass(compound, False, show_work)
@@ -369,25 +448,25 @@ class Program:
                 product_dict[product_a["symbol"]] += product_a["amount"]
             else:
                 product_dict[product_a["symbol"]] = product_a["amount"]
-
         for r_dict in reactant_dict_list:
             for p_dict in product_dict_list:
-                if r_dict["amount"] != p_dict["amount"]:
-                    if reactant_dict[r_dict["symbol"]] > product_dict[r_dict["symbol"]]:
-                        if r_dict["symbol"] == p_dict["symbol"]:
-                            multiplier = r_dict["amount"] / p_dict["amount"]
-                            p_dict["compound"] = str(multiplier * p_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", p_dict["compound"]).group()
-                            p_dict["amount"] = multiplier * p_dict["coefficient"] * p_dict["subscript"]
-                            product_dict[p_dict["symbol"]] = p_dict["amount"]
-                            print(str(p_dict["compound"]) + " " + str(p_dict["amount"]) + " p")
-                    elif reactant_dict[r_dict["symbol"]] < product_dict[r_dict["symbol"]]:
-                        if p_dict["symbol"] == r_dict["symbol"]:
-                            print(str(p_dict["amount"]) + " " + str(r_dict["amount"]))
-                            multiplier = p_dict["amount"] / r_dict["amount"]
-                            r_dict["compound"] = str(multiplier * r_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", r_dict["compound"]).group()
-                            r_dict["amount"] = multiplier * r_dict["coefficient"] * r_dict["subscript"]
-                            reactant_dict[r_dict["symbol"]] = r_dict["amount"]
-                            print(str(r_dict["compound"]) + " " + str(r_dict["amount"]) + " r")
+                if reactant_dict[r_dict["symbol"]] > product_dict[r_dict["symbol"]]:
+                    if r_dict["symbol"] == p_dict["symbol"]:
+                        multiplier = r_dict["amount"] / p_dict["amount"]
+
+                        p_dict["compound"] = str(multiplier * p_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", p_dict["compound"]).group()
+                        p_dict["amount"] = multiplier * p_dict["coefficient"] * p_dict["subscript"]
+                        product_dict[p_dict["symbol"]] = p_dict["amount"]
+                        print(str(p_dict["compound"]) + " " + str(p_dict["amount"]) + " p")
+                elif reactant_dict[r_dict["symbol"]] < product_dict[r_dict["symbol"]]:
+                    if p_dict["symbol"] == r_dict["symbol"]:
+                        print(str(p_dict["amount"]) + " " + str(r_dict["amount"]))
+                        multiplier = p_dict["amount"] / r_dict["amount"]
+
+                        r_dict["compound"] = str(multiplier * r_dict["coefficient"]) + re.search("[(]*[A-Z](.*)+", r_dict["compound"]).group()
+                        r_dict["amount"] = multiplier * r_dict["coefficient"] * r_dict["subscript"]
+                        reactant_dict[r_dict["symbol"]] = r_dict["amount"]
+                        print(str(r_dict["compound"]) + " " + str(r_dict["amount"]) + " r")
 
         print(str(reactant_dict) + "\n" + str(product_dict))
 
@@ -398,7 +477,7 @@ class Program:
         for string in split_compound:
             element_string_list = re.findall("[A-Z][a-z]?[0-9]*", string)
             if len(element_string_list) > 1:
-                p_subscript = re.sub("[^0-9]", "", re.search("[(].*?[)][0-9]*", string).group())
+                p_subscript = re.sub("[(].*?[)]", "", re.search("[(].*?[)][0-9]*", string).group())
                 if p_subscript == "":
                     p_subscript = "1"
                 for polyatomic_ion in self.polyatomic_ions["ions"]:
@@ -415,7 +494,7 @@ class Program:
                                 append = True
                         if append:
                             atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
-                                                "name": polyatomic_ion["name"].lower(),
+                                                "name": polyatomic_ion["name"],
                                                 "subscript": int(p_subscript),
                                                 "charge": polyatomic_ion["charge"],
                                                 "category": "polyatomic ion"})
@@ -428,26 +507,23 @@ class Program:
 
                     for element in self.periodic_table["elements"]:
                         if element["symbol"] == symbol:
-                            charge = 0
-                            if element["xpos"] >= 15:
-                                charge = element["xpos"] - 18
-                            elif element["xpos"] <= 2:
-                                charge = element["xpos"]
                             atomic_list.append(
-                                {"raw_string": element_string, "symbol": symbol, "name": element["name"].lower(),
+                                {"raw_string": element_string, "symbol": symbol, "name": element["name"],
                                  "prefix": "", "suffix": "",
-                                 "subscript": int(subscript), "charge": int(charge),
+                                 "subscript": int(subscript),
+                                 "charge": element["charge"],
                                  "category": element["category"]})
         return atomic_list
 
     def translate_text(self, text, translation):
         normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()"
         numbers = "0123456789"
+        sup = "0123456789+-"
 
         subscript = str.maketrans(normal, "ₐ₈CDₑբGₕᵢⱼₖₗₘₙₒₚQᵣₛₜᵤᵥwₓᵧZₐ♭꜀ᑯₑբ₉ₕᵢⱼₖₗₘₙₒₚ૧ᵣₛₜᵤᵥwₓᵧ₂₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎")
         f_subscript = str.maketrans(numbers, "₀₁₂₃₄₅₆₇₈₉")
         superscript = str.maketrans(normal, "ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖ۹ʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾")
-        f_superscript = str.maketrans(numbers, "⁰¹²³⁴⁵⁶⁷⁸⁹")
+        f_superscript = str.maketrans(sup, "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
 
         if translation == "subscript":
             return text.translate(subscript)
@@ -458,7 +534,9 @@ class Program:
         elif translation == "superscript":
             return text.translate(superscript)
         elif translation == "f_superscript":
-            return (text.translate(f_superscript)).replace("1", "")
+            coefficient = re.match("^.*?[0-9]*", text).group()
+            compound = re.search("[(]*[A-Z](.*)+", text).group()
+            return coefficient + (compound.translate(f_superscript)).replace("¹", "")
 
     def int_to_roman(self, number):
         val = [
@@ -481,6 +559,22 @@ class Program:
                 number -= val[i]
             i += 1
         return roman_num
+
+    def roman_to_int(self, roman_num):
+        roman = {"M": 1000, "CM": 900, "D": 500, "CD": 400,
+            "C": 100, "XC": 90, "L": 50, "XL": 40,
+            "X": 10, "IX": 9, "V": 5, "IV": 4,
+            "I": 1}
+        i = 0
+        number = 0
+        while i < len(roman_num):
+            if i+1 < len(roman_num) and roman_num[i:i+2] in roman:
+                number += roman[roman_num[i:i+2]]
+                i += 2
+            else:
+                number += roman[roman_num[i]]
+                i += 1
+        return number
 
     def syllables(self, word):
         count = 0
@@ -522,8 +616,13 @@ program = Program()
 
 while running:
     inputString = input(program.inputPrompt)
-    if inputString.lower() == "exit" or inputString.lower() == "e":
+    if inputString.lower() == "exit" or inputString.lower() == "/e":
+        print("chemistry: Exiting")
         running = False
+    elif inputString.lower() == "list" or inputString.lower() == "/l":
+        print("chemistry: List of all commands")
+        for cmd in program.command_list:
+            print(" " + cmd + ": " + str(program.command_list[cmd]))
     else:
         program.calculate(inputString)
     time.sleep(0.1)

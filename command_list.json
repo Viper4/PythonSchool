@@ -1,0 +1,13 @@
+{
+  "Exit": ["/e", "exit"],
+  "Command list": ["/l", "list"],
+  "Toggle work": ["/sw", "show work"],
+  "Get molar mass": ["gmm", "get_molar_mass"],
+  "Get element info": ["gei", "get_element_info"],
+  "Get polyatomic info": ["gpi", "get_polyatomic_info"],
+  "Moles to grans": ["mtg", "moles_to_grams"],
+  "Get sig figs": ["gsf", "get_sig_figs"],
+  "Get systematic name": ["gsn", "get_systematic_name"],
+  "Get mass percent": ["gmp", "get_mass_percent"],
+  "Balance equation": ["be", "balance_equation"]
+}
