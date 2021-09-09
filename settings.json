@@ -50,6 +50,11 @@
       "info": "Returns systematic name of any given chemical formula",
       "example": "Type formula Ex: Fe2O3"
     },
+    "get_acid_name": {
+      "command": ["gan", "get_acid_name"],
+      "info": "Returns acidic name of any given chemical formula",
+      "example": "Type formula Ex: H2SO4"
+    },
     "get_chemical_formula": {
       "command": ["gcf", "get_chemical_formula"],
       "info": "Returns chemical formula of any given systematic name",

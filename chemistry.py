@@ -132,8 +132,11 @@ class Program:
                         self.lastResult = result
                     elif self.calcMode == "get_systematic_name":
                         name = self.get_systematic_name(inputString, self.show_work)
-                        print(
-                            "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
+                        print("get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
+                        self.lastResult = name
+                    elif self.calcMode == "get_acid_name":
+                        name = self.get_acid_name(inputString, self.show_work)
+                        print("get_acid_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
                         self.lastResult = name
                     elif self.calcMode == "get_chemical_formula":
                         formula = self.get_chemical_formula(inputString, self.show_work)
@@ -290,39 +293,39 @@ class Program:
 
         return output
 
-    def get_systematic_name(self, compound, show_work):
-        formatted_compound = self.translate_text(compound, "f_subscript")
+    def get_systematic_name(self, formula, show_work):
+        formatted_compound = self.translate_text(formula, "f_subscript")
         if show_work:
             print(formatted_compound + " systematic name:")
         systematic_name = ""
-        atomic_list = self.process_compound(compound)
+        atomic_list = self.process_compound(formula)
 
         not_metal = 0
         metal = 0
-        for element in atomic_list:
-            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in \
-                    element["category"] or "polyatomic ion" in element["category"]:
+        for item in atomic_list:
+            if "nonmetal" in item["category"] or "metalloid" in item["category"] or "noble gas" in \
+                    item["category"] or "polyatomic ion" in item["category"]:
                 not_metal += 1
-            elif "metal" in element["category"]:
+            elif "metal" in item["category"]:
                 metal += 1
             if show_work:
-                print(" " + element["symbol"] + " is a " + element["category"])
+                print(" " + item["symbol"] + " is a " + item["category"])
         if metal == 0:
             if show_work:
                 print(" " + formatted_compound + " is covalent")
-            for element in atomic_list:
-                syllables = self.syllables(element["name"].lower())
-                element["prefix"] = self.prefixes_suffixes["prefixes"][element["subscript"] - 1]
+            for item in atomic_list:
+                syllables = self.syllables(item["name"].lower())
+                item["prefix"] = self.prefixes_suffixes["prefixes"][item["subscript"] - 1]
 
-                if atomic_list.index(element) != 0:
-                    element["name"] = syllables[0] + "ide"
-                    if element["name"][0] == "o" and element["prefix"] == "mono":
-                        element["prefix"] = "mon"
+                if atomic_list.index(item) != 0:
+                    item["name"] = syllables[0] + "ide"
+                    if item["name"][0] == "o" and item["prefix"] == "mono":
+                        item["prefix"] = "mon"
                 else:
-                    if element["prefix"] == "mono":
-                        element["prefix"] = ""
+                    if item["prefix"] == "mono":
+                        item["prefix"] = ""
 
-                systematic_name = str(systematic_name) + (element["prefix"] + element["name"]).capitalize() + " "
+                systematic_name = str(systematic_name) + (item["prefix"] + item["name"]).capitalize() + " "
         elif metal >= 1 and not_metal >= 1:
             if show_work:
                 print(" " + formatted_compound + " is ionic")
@@ -347,6 +350,36 @@ class Program:
                         element["name"] = syllables[0] + "ide"
                     systematic_name += element["name"].capitalize() + " "
         return systematic_name
+
+    def get_acid_name(self, formula, show_work):
+        formatted_compound = self.translate_text(formula, "f_subscript")
+        if show_work:
+            print(formatted_compound + " acid name:")
+        acid_name = ""
+        atomic_list = self.process_compound(formula)
+        for item in atomic_list:
+            syllables = self.syllables(item["name"].lower())
+            if atomic_list.index(item) == 0:
+                acid_name = re.sub(syllables[len(syllables) - 1], "", item["name"].lower())[:-1]
+            else:
+                if item["category"] == "polyatomic_ion":
+                    extra_ending = item["ending"]
+                    print(syllables[len(syllables) - 1].lower())
+                    if "ate" in syllables[len(syllables) - 1].lower():
+                        if show_work:
+                            print(" " + item["symbol"] + " ends in ate")
+
+                        acid_name = syllables[0] + str(extra_ending) + "ic"
+                    elif "ite" in syllables[len(syllables) - 1].lower():
+                        if show_work:
+                            print(" " + item["symbol"] + " ends in ite")
+                        acid_name = syllables[0] + str(extra_ending) + "ous"
+                else:
+                    if show_work:
+                        print(" " + item["symbol"] + " ends in ide")
+                    acid_name += syllables[0] + "ic"
+
+        return acid_name.capitalize() + " acid"
 
     def get_chemical_formula(self, systematic_name, show_work):
         formula = ""
@@ -486,6 +519,7 @@ class Program:
         atomic_list = []
 
         split_compound = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
+        print(split_compound)
         for string in split_compound:
             element_string_list = re.findall("[A-Z][a-z]?[0-9]*", string)
             if len(element_string_list) > 1:
@@ -495,25 +529,19 @@ class Program:
                 for polyatomic_ion in self.polyatomic_ions["ions"]:
                     if polyatomic_ion["symbol"] in string:
                         append = False
-                        for item in atomic_list:
-                            if item["raw_string"] in string:
-                                if len(polyatomic_ion["symbol"]) > len(item["symbol"]):
-                                    atomic_list.remove(item)
-                                    append = True
-                                else:
-                                    append = False
-                            else:
-                                append = True
+                        if len(polyatomic_ion["symbol"]) == len(re.sub("[()]", "", re.search("[(].*?[)]", string).group())):
+                            append = True
                         if append:
                             atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
                                                 "name": polyatomic_ion["name"],
                                                 "subscript": int(p_subscript),
                                                 "charge": polyatomic_ion["charge"],
-                                                "category": "polyatomic ion"})
-                        break
+                                                "category": "polyatomic_ion",
+                                                "ending": polyatomic_ion["ending"]})
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
+                    print(symbol)
                     subscript = re.sub("[^0-9]", "", element_string)
                     if subscript == "":
                         subscript = "1"
@@ -526,7 +554,6 @@ class Program:
                                  "subscript": int(subscript),
                                  "charge": element["charge"],
                                  "category": element["category"]})
-                            break
         return atomic_list
 
     def process_sys_name(self, systematic_name):

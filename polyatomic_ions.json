@@ -3,152 +3,182 @@
     {
 	"name": "Ammonium ",
 	"symbol": "NH4",
-    "charge": 1
+    "charge": 1,
+    "ending": ""
     },
     {
 	"name": "Sulfate",
 	"symbol": "SO4",
-    "charge": -2
+    "charge": -2,
+    "ending": "ur"
     },
     {
 	"name": "Hydrogen sulfate",
 	"symbol": "HSO4",
-    "charge": -1
+    "charge": -1,
+    "ending": "ur"
     },
     {
 	"name": "Sulfite",
 	"symbol": "SO3",
-    "charge": -2
+    "charge": -2,
+    "ending": "ur"
     },
     {
 	"name": "Nitrate",
 	"symbol": "NO3",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Nitrite",
 	"symbol": "NO2",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Phosphate",
 	"symbol": "PO4",
-    "charge": -3
+    "charge": -3,
+    "ending": ""
     },
     {
 	"name": "Hydrogen phosphate",
 	"symbol": "HPO4",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Dihydrogen phosphate",
 	"symbol": "H2PO4",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Phosphite",
 	"symbol": "PO3",
-    "charge": -3
+    "charge": -3,
+    "ending": ""
     },
     {
 	"name": "Hydroxide",
 	"symbol": "OH",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Peroxide",
 	"symbol": "O2",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Acetate",
 	"symbol": "C2H3O2",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Perchlorate",
 	"symbol": "ClO4",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Chlorate",
 	"symbol": "ClO3",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Chlorite",
 	"symbol": "ClO2",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Hypochlorite",
 	"symbol": "ClO",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Chromate",
 	"symbol": "CrO4",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Dichromate",
 	"symbol": "Cr2O7",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Permanganate",
 	"symbol": "MnO4",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Cyanide",
 	"symbol": "CN",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Cyanate",
 	"symbol": "CNO",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Thiocyanate",
 	"symbol": "SNO",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Carbonate",
 	"symbol": "CO3",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Hydrogen carbonate",
 	"symbol": "HCO3",
-    "charge": -1
+    "charge": -1,
+    "ending": ""
     },
     {
 	"name": "Oxalate",
 	"symbol": "C2O4",
-    "charge": -2
+    "charge": -2,
+    "ending": ""
     },
     {
 	"name": "Thiosulfate",
 	"symbol": "S2O3",
-    "charge": -2
+    "charge": -2,
+    "ending": "ur"
     },
     {
 	"name": "Mercury(I)",
 	"symbol": "Hg2",
-    "charge": 2
+    "charge": 2,
+    "ending": ""
     },
     {
 	"name": "Hydronium",
 	"symbol": "H3O",
-    "charge": 1
+    "charge": 1,
+    "ending": ""
     },
     {
 	"name": "Ammonia",
 	"symbol": "NH3",
-    "charge": 0
+    "charge": 0,
+    "ending": ""
     }
   ]
 }
