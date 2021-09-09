@@ -7,89 +7,71 @@ import urllib.request
 class Program:
     def __init__(self):
         super().__init__()
+        with open("settings.json", encoding='utf-8') as file:
+            self.settings = json.load(file)
         self.calcMode = ""
         self.lastResult = ""
-        self.showWork = True
-        self.inputPrompt = "Type command: "
-        valid_response = False
-        local_prompt = input("Load files locally? Y/N: ")
+        self.show_work = self.settings["load_settings"]["show_work"]
+        self.load_locally = self.settings["load_settings"]["load_locally"]
 
+        self.inputPrompt = "Type command: "
+        valid_response = True
+        if self.load_locally is None:
+            valid_response = False
+            local_prompt = input("Load files locally? Y/N: ")
         while not valid_response:
             if local_prompt.lower() == "y":
-                with open("periodic_table.json", encoding='utf-8') as file:
-                    self.periodic_table = json.load(file)
-                with open("polyatomic_ions.json", encoding='utf-8') as file:
-                    self.polyatomic_ions = json.load(file)
-                with open("prefixes_suffixes.json", encoding='utf-8') as file:
-                    self.prefixes_suffixes = json.load(file)
-                with open("command_list.json", encoding='utf-8') as file:
-                    self.command_list = json.load(file)
+                self.load_locally = True
                 valid_response = True
             elif local_prompt.lower() == "n":
-                periodic_table_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
-                self.periodic_table = json.load(periodic_table_url)
-
-                polyatomic_ions_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
-                self.polyatomic_ions = json.load(polyatomic_ions_url)
-
-                prefixes_suffixes_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
-                self.prefixes_suffixes = json.load(prefixes_suffixes_url)
-
-                command_list_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/command_list.json')
-                self.command_list = json.load(command_list_url)
+                self.load_locally = False
                 valid_response = True
             else:
                 local_prompt = input("Invalid response, type Y or N: ")
             time.sleep(0.1)
+        if self.load_locally:
+            with open("periodic_table.json", encoding='utf-8') as file:
+                self.periodic_table = json.load(file)
+            with open("polyatomic_ions.json", encoding='utf-8') as file:
+                self.polyatomic_ions = json.load(file)
+            with open("prefixes_suffixes.json", encoding='utf-8') as file:
+                self.prefixes_suffixes = json.load(file)
+            with open("settings.json", encoding='utf-8') as file:
+                self.settings = json.load(file)
+        else:
+            periodic_table_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/periodic_table.json')
+            self.periodic_table = json.load(periodic_table_url)
 
-        print("chemistry: Active, '/e' to exit")
+            polyatomic_ions_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/polyatomic_ions.json')
+            self.polyatomic_ions = json.load(polyatomic_ions_url)
+
+            prefixes_suffixes_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/prefixes_suffixes.json')
+            self.prefixes_suffixes = json.load(prefixes_suffixes_url)
+
+            settings_url = urllib.request.urlopen('https://raw.githubusercontent.com/Viper4/PythonSchool/master/settings.json')
+            self.settings = json.load(settings_url)
+        print("chemistry: Active, " + str(self.settings["commands"]["exit"]["command"])[1:-1].replace(", ", " or ") + " to exit")
 
     def calculate(self, inputString):
-        if "show work" in inputString or "/sw" in inputString:
-            self.showWork = not self.showWork
-            print("Show work: " + str(self.showWork))
+        if inputString.lower() in self.settings["commands"]["toggle_work"]["command"]:
+            self.show_work = not self.show_work
+            print("Show work: " + str(self.show_work))
             re.sub("show work|/sw", "", inputString)
         if inputString != "/sw" and inputString != "show work":
-            if "get_molar_mass" in inputString or "gmm" in inputString:
-                print("Type a compound Ex: 2NaHCO3")
-                self.inputPrompt = "get_molar_mass: "
-                self.calcMode = "get_molar_mass"
-            elif "get_element_info" in inputString or "gei" in inputString:
-                print("Type a element")
-                self.inputPrompt = "get_element_info: "
-                self.calcMode = "get_element_info"
-            elif "get_polyatomic_info" in inputString or "gpi" in inputString:
-                print("Type a polyatomic")
-                self.inputPrompt = "get_polyatomic_info: "
-                self.calcMode = "get_polyatomic_info"
-            elif "moles_to_grams" in inputString or "mtg" in inputString:
-                print("Type moles and formula Ex: 1.3 mol NaCl")
-                self.inputPrompt = "moles_to_grams: "
-                self.calcMode = "moles_to_grams"
-            elif "get_sig_figs" in inputString or "gsf" in inputString:
-                print("Type a number")
-                self.inputPrompt = "get_sig_figs: "
-                self.calcMode = "get_sig_figs"
-            elif "get_systematic_name" in inputString or "gsn" in inputString:
-                print("Type formula Ex: Fe2O3")
-                self.inputPrompt = "get_systematic_name: "
-                self.calcMode = "get_systematic_name"
-            elif "get_chemical_formula" in inputString or "gcf" in inputString:
-                print("Type systematic name Ex: Iron(III) Oxide")
-                self.inputPrompt = "get_chemical_formula: "
-                self.calcMode = "get_chemical_formula"
-            elif "get_mass_percent" in inputString or "gmp" in inputString:
-                print("Type elements/molecules in compound Ex: H2 O in H2O")
-                self.inputPrompt = "get_mass_percent: "
-                self.calcMode = "get_mass_percent"
-            elif "balance_equation" in inputString or "be" in inputString:
-                print("Type chemical equation Ex: C5H12 + O2 -> CO2 + H2O")
-                self.inputPrompt = "balance_equation: "
-                self.calcMode = "balance_equation"
-            else:
+            switch_cmd = False
+            for cmd in self.settings["commands"]:
+                if inputString.lower() in self.settings["commands"][cmd]["command"]:
+                    print(self.settings["commands"][cmd]["example"])
+                    self.inputPrompt = cmd + ": "
+                    self.calcMode = cmd
+                    switch_cmd = True
+                    break
+                else:
+                    switch_cmd = False
+            if not switch_cmd:
                 try:
                     if self.calcMode == "get_molar_mass":
-                        molar_mass = str(self.get_molar_mass(inputString, False, self.showWork))
+                        molar_mass = str(self.get_molar_mass(inputString, False, self.show_work))
                         print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + ": " + molar_mass + "g/mol")
                         self.lastResult = molar_mass
                     elif self.calcMode == "get_element_info":
@@ -100,7 +82,7 @@ class Program:
                         except IndexError:
                             variable = ""
                         for element in self.periodic_table["elements"]:
-                            if element["symbol"] == element_string or element["name"] == element_string:
+                            if element["symbol"] == element_string or element["name"].lower() == element_string.lower():
                                 print("get_element_info: " + element["symbol"] + " " + element["name"] + " (temp in Kelvin)")
                                 if variable == "" or variable.lower() == "all":
                                     for var in element:
@@ -111,6 +93,7 @@ class Program:
                                         print(" " + variable.lower() + ": " + str(element[variable.lower()]))
                                     else:
                                         print(" '" + variable + "' does not exist")
+                                break
                         self.lastResult = inputString
                     elif self.calcMode == "get_polyatomic_info":
                         split_string = inputString.split(" ", 1)
@@ -120,22 +103,23 @@ class Program:
                         except IndexError:
                             variable = ""
                         for polyatomic in self.polyatomic_ions["ions"]:
-                            if polyatomic["symbol"] == poly_string or polyatomic["name"] == poly_string:
+                            if polyatomic["symbol"] == poly_string or polyatomic["name"].lower() == poly_string.lower():
                                 print("get_polyatomic_info: " + polyatomic["symbol"] + " " + polyatomic["name"])
                                 if variable == "" or variable.lower() == "all":
                                     for var in polyatomic:
-                                        if var != "symbol" and variable != "name" and var != "color":
+                                        if var != "symbol" and var != "name":
                                             print(" " + var + ": " + str(polyatomic[str(var)]))
                                 else:
                                     if variable.lower() in polyatomic:
                                         print(" " + variable.lower() + ": " + str(polyatomic[variable.lower()]))
                                     else:
                                         print(" '" + variable + "' does not exist")
+                                break
                         self.lastResult = inputString
                     elif self.calcMode == "moles_to_grams":
                         formula = re.sub("[0-9]*[.]*[0-9]* mol ", "", inputString)
                         moles = re.sub(" mol ", "", re.sub(formula, "", inputString))
-                        grams = self.moles_to_grams(moles, formula, True, self.showWork)
+                        grams = self.moles_to_grams(moles, formula, True, self.show_work)
                         print("moles_to_grams: " + moles + " mol " + self.translate_text(formula, "f_subscript") + " = " + grams + "g")
                         self.lastResult = grams
                     elif self.calcMode == "get_sig_figs":
@@ -147,12 +131,12 @@ class Program:
                             print("get_sig_figs: " + inputString + " -> " + result)
                         self.lastResult = result
                     elif self.calcMode == "get_systematic_name":
-                        name = self.get_systematic_name(inputString, self.showWork)
+                        name = self.get_systematic_name(inputString, self.show_work)
                         print(
                             "get_systematic_name: " + self.translate_text(inputString, "f_subscript") + " -> " + name)
                         self.lastResult = name
                     elif self.calcMode == "get_chemical_formula":
-                        formula = self.get_chemical_formula(inputString, self.showWork)
+                        formula = self.get_chemical_formula(inputString, self.show_work)
                         print("get_chemical_formula: " + formula)
                         self.lastResult = formula
                     elif self.calcMode == "get_mass_percent":
@@ -166,12 +150,10 @@ class Program:
                         if len(elements) == 0:
                             elements = re.findall("[(].*?[)][0-9]*|[A-Z][a-z]?[0-9]*", compound)
                         print("get_mass_percent: " + self.translate_text(inputString, "f_subscript"))
-                        self.get_mass_percent(elements, compound, True, self.showWork)
+                        self.get_mass_percent(elements, compound, True, self.show_work)
                         self.lastResult = inputString
                     elif self.calcMode == "balance_equation":
                         self.balance_equation(inputString)
-                    else:
-                        print("chemistry: Unknown command, type '/l' for a list of commands")
                 except AttributeError:
                     print(self.calcMode + ": '" + inputString + "' is invalid")
 
@@ -310,7 +292,8 @@ class Program:
 
     def get_systematic_name(self, compound, show_work):
         formatted_compound = self.translate_text(compound, "f_subscript")
-        print(formatted_compound + " systematic name:")
+        if show_work:
+            print(formatted_compound + " systematic name:")
         systematic_name = ""
         atomic_list = self.process_compound(compound)
 
@@ -335,6 +318,9 @@ class Program:
                     element["name"] = syllables[0] + "ide"
                     if element["name"][0] == "o" and element["prefix"] == "mono":
                         element["prefix"] = "mon"
+                else:
+                    if element["prefix"] == "mono":
+                        element["prefix"] = ""
 
                 systematic_name = str(systematic_name) + (element["prefix"] + element["name"]).capitalize() + " "
         elif metal >= 1 and not_metal >= 1:
@@ -364,34 +350,60 @@ class Program:
 
     def get_chemical_formula(self, systematic_name, show_work):
         formula = ""
-        names = str(systematic_name).split(" ")
-        atomic_list = []
-        for sys_name in names:
-            formatted_name = re.sub("[(].*?[)]", "", sys_name).replace("ide", "")
-            for element in self.periodic_table["elements"]:
-                if formatted_name.lower() in element["name"].lower():
-                    charge = element["charge"]
-                    if "(" in sys_name:
-                        charge = self.roman_to_int(re.sub("[()]", "", re.search("[(].*?[)]", sys_name).group()))
-                    atomic_list.append({"sys_name": sys_name, "symbol": element["symbol"], "category": element["category"], "charge": charge})
-            for polyatomic_ion in self.polyatomic_ions["ions"]:
-                if polyatomic_ion["name"].lower() in sys_name.lower():
-                    atomic_list.append({"sys_name": sys_name, "symbol": polyatomic_ion["symbol"], "category": "polyatomic_ion", "charge": polyatomic_ion["charge"]})
-        for item in atomic_list:
-            subscript = 0
-            if item["charge"] is not None:
-                index = atomic_list.index(item)
-                other_item = atomic_list[(len(atomic_list) - 1) - index]
-                subscript = abs(other_item["charge"])
-                if show_work:
-                    if other_item["charge"] > 0:
-                        other_item["charge"] = "+" + str(other_item["charge"])
-                    print(" Flip and drop: " + self.translate_text(other_item["symbol"] + str(other_item["charge"])[::-1], "f_superscript") + " -> " + self.translate_text(item["symbol"] + str(subscript), "f_subscript"))
+        if show_work:
+            print(systematic_name + " chemical formula:")
+        atomic_list = self.process_sys_name(systematic_name)
 
-            if item["category"] == "polyatomic_ion" and subscript > 1:
-                formula += "(" + item["symbol"] + ")" + str(subscript)
-            else:
-                formula += item["symbol"] + str(subscript)
+        not_metal = 0
+        metal = 0
+        for element in atomic_list:
+            if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in \
+                    element["category"] or "polyatomic_ion" in element["category"]:
+                not_metal += 1
+            elif "metal" in element["category"]:
+                metal += 1
+            if show_work:
+                print(" " + element["symbol"] + " is a " + element["category"])
+        if metal == 0:
+            if show_work:
+                print(" " + systematic_name + " is covalent")
+            for item in atomic_list:
+                if item["category"] == "polyatomic_ion" and item["subscript"] != 1:
+                    formula += "(" + item["symbol"] + ")" + str(item["subscript"])
+                else:
+                    formula += item["symbol"] + str(item["subscript"])
+        elif metal >= 1 and not_metal >= 1:
+            if show_work:
+                print(" " + systematic_name + " is ionic")
+            for item in atomic_list:
+                subscript = 0
+                if item["charge"] is not None:
+                    index = atomic_list.index(item)
+                    other_item = atomic_list[(len(atomic_list) - 1) - index]
+
+                    if show_work:
+                        if other_item["charge"] > 0:
+                            other_item["charge"] = "+" + str(other_item["charge"])
+                        print(" Flip and drop: " + self.translate_text(other_item["symbol"] + str(other_item["charge"])[::-1], "f_superscript") + " -> " + self.translate_text(item["symbol"] + str(subscript), "f_subscript"))
+
+                    maxCharge = max(item["charge"], other_item["charge"])
+                    minCharge = min(item["charge"], other_item["charge"])
+                    remainder = maxCharge % minCharge
+                    divisible = remainder == 0
+                    if divisible:
+                        if item["charge"] == maxCharge:
+                            item["charge"] = int(maxCharge / minCharge)
+                            other_item["charge"] = int(minCharge / minCharge)
+                        else:
+                            item["charge"] = int(minCharge / minCharge)
+                            other_item["charge"] = int(maxCharge / minCharge)
+                    subscript = abs(other_item["charge"])
+
+                if item["category"] == "polyatomic_ion" and subscript != 1:
+                    formula += "(" + item["symbol"] + ")" + str(subscript)
+                else:
+                    formula += item["symbol"] + str(subscript)
+
         return self.translate_text(formula, "f_subscript")
 
     def get_mass_percent(self, elements, compound, round_sig_figs, show_work):
@@ -498,6 +510,7 @@ class Program:
                                                 "subscript": int(p_subscript),
                                                 "charge": polyatomic_ion["charge"],
                                                 "category": "polyatomic ion"})
+                        break
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
@@ -513,6 +526,39 @@ class Program:
                                  "subscript": int(subscript),
                                  "charge": element["charge"],
                                  "category": element["category"]})
+                            break
+        return atomic_list
+
+    def process_sys_name(self, systematic_name):
+        names = str(systematic_name).split(" ")
+        atomic_list = []
+        for name in names:
+            formatted_name = re.sub("[(].*?[)]", "", name).capitalize()
+            prefix = ""
+            subscript = 1
+            for pre in self.prefixes_suffixes["prefixes"]:
+                if pre.capitalize() in formatted_name:
+                    prefix = pre
+                    subscript = self.prefixes_suffixes["prefixes"].index(pre) + 1
+                    formatted_name = re.sub(pre, "", formatted_name)
+            for element in self.periodic_table["elements"]:
+                syllables = self.syllables(element["name"].lower())
+                formatted_element = syllables[0] + "ide"
+                if formatted_name in element["name"] or formatted_element.capitalize() in name.capitalize():
+                    charge = element["charge"]
+
+                    if "(" in name:
+                        charge = self.roman_to_int(re.sub("[()]", "", re.search("[(].*?[)]", name).group()))
+                    atomic_list.append(
+                        {"sys_name": name, "symbol": element["symbol"], "prefix": prefix, "subscript": subscript, "category": element["category"],
+                         "charge": charge})
+                    break
+            for polyatomic_ion in self.polyatomic_ions["ions"]:
+                if formatted_name in polyatomic_ion["name"]:
+                    atomic_list.append(
+                        {"sys_name": name, "symbol": polyatomic_ion["symbol"], "prefix": prefix, "subscript": subscript, "category": "polyatomic_ion",
+                         "charge": polyatomic_ion["charge"]})
+                    break
         return atomic_list
 
     def translate_text(self, text, translation):
@@ -616,13 +662,24 @@ program = Program()
 
 while running:
     inputString = input(program.inputPrompt)
-    if inputString.lower() == "exit" or inputString.lower() == "/e":
+    if inputString.lower() in program.settings["commands"]["exit"]["command"]:
         print("chemistry: Exiting")
         running = False
-    elif inputString.lower() == "list" or inputString.lower() == "/l":
-        print("chemistry: List of all commands")
-        for cmd in program.command_list:
-            print(" " + cmd + ": " + str(program.command_list[cmd]))
+    elif inputString.lower() in program.settings["commands"]["command_list"]["command"]:
+        print("command_list: All commands")
+        for cmd in program.settings["commands"]:
+            print(" " + cmd + ": " + str(program.settings["commands"][cmd]["command"])[1:-1].replace(", ", " or ") + " " + program.settings["commands"][cmd]["info"])
+    elif inputString.lower() in program.settings["commands"]["save_settings"]["command"]:
+        print("save_settings: Not implemented yet")
+        '''
+        with open("settings.json", "w") as file:
+            load_settings = {"show_work": program.show_work, "load_locally": program.load_locally}
+
+            jsonData = json.dumps(load_settings, indent=4)
+            file.write(jsonData)
+        program.settings["load_settings"]["show_work"] = program.show_work
+        program.settings["load_settings"]["load_locally"] = program.load_locally
+        '''
     else:
         program.calculate(inputString)
     time.sleep(0.1)

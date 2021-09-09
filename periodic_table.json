@@ -475,7 +475,7 @@
             "cpk-hex": "8aff00"
         },
         {
-            "name": "Aluminium",
+            "name": "Aluminum",
             "appearance": "silvery gray metallic",
             "atomic_mass": 26.98153857,
             "boil": 2743,
@@ -490,7 +490,7 @@
             "phase": "Solid",
             "source": "https://en.wikipedia.org/wiki/Aluminium",
             "spectral_img": null,
-            "summary": "Aluminium (or aluminum; see different endings) is a chemical element in the boron group with symbol Al and atomic number 13. It is a silvery-white, soft, nonmagnetic, ductile metal. Aluminium is the third most abundant element (after oxygen and silicon), and the most abundant metal, in the Earth's crust.",
+            "summary": "Aluminum (or aluminium; see different endings) is a chemical element in the boron group with symbol Al and atomic number 13. It is a silvery-white, soft, nonmagnetic, ductile metal. Aluminium is the third most abundant element (after oxygen and silicon), and the most abundant metal, in the Earth's crust.",
             "symbol": "Al",
             "xpos": 13,
             "ypos": 3,
