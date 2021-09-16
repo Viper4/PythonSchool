@@ -12,10 +12,6 @@
       "command": ["/l", "list"],
       "info": "Lists all valid commands"
     },
-    "save_settings": {
-      "command": ["/s", "save"],
-      "info": "Saves current settings to file"
-    },
     "toggle_work": {
       "command": ["/sw", "show work"],
       "info": "Toggles whether work will be shown"
@@ -35,10 +31,10 @@
       "info": "Returns information on given polyatomic",
       "example": "Type a polyatomic and variable or all Ex: OH charge"
     },
-    "moles_to_grams": {
-      "command": ["mtg", "moles_to_grams"],
-      "info": "Converts given moles to grams",
-      "example": "Type moles and formula Ex: 1.3 mol NaCl"
+    "unit_conversion": {
+      "command": ["uc", "unit_conversion"],
+      "info": "Converts given unit to given unit",
+      "example": "Type unit and formula, then desired unit Ex: 1.3mol NaCl -> g"
     },
     "get_sig_figs": {
       "command": ["gsf", "get_sig_figs"],
