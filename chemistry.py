@@ -124,7 +124,7 @@ class Program:
                         formula = split_string[1]
                         desired_unit = re.sub("[->][to]?[ ]*", "", split_string[2])
 
-                        output = self.unit_conversion(value, unit, formula, desired_unit, True, self.show_work)
+                        output = self.unit_conversion(value, unit, desired_unit, formula, True, self.show_work)
                         print("unit_conversion: " + str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " = " + output)
                         self.lastResult = output
                     elif self.calcMode == "get_sig_figs":
@@ -161,7 +161,9 @@ class Program:
                         self.get_mass_percent(elements, compound, True, self.show_work)
                         self.lastResult = inputString
                     elif self.calcMode == "balance_equation":
-                        self.balance_equation(inputString)
+                        equation = self.balance_equation(inputString)
+                        print("balance_equation: " + equation)
+                        self.lastResult = equation
                 except AttributeError:
                     print(self.calcMode + ": '" + inputString + "' is invalid")
 
@@ -223,7 +225,7 @@ class Program:
                 total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-", show_work)
         return total_molar_mass
 
-    def unit_conversion(self, value, unit, formula, desired_unit, round_sig_figs, show_work):
+    def unit_conversion(self, value, unit, desired_unit, formula, round_sig_figs, show_work):
         output_val = 0
         molar_mass = 0
         if formula.lower() != "none":
@@ -495,11 +497,13 @@ class Program:
 
     def balance_equation(self, equation):
         split_equation = str(equation).split("->", 1)
-        reactants = split_equation[0].split("+")
-        products = split_equation[1].split("+")
+        reactants = split_equation[0].replace(" ", "").split("+")
+        products = split_equation[1].replace(" ", "").split("+")
+        reactant_text = []
+        product_text = []
+
         reactant_compounds = {}
         reactant_elements = {}
-
         product_compounds = {}
         product_elements = {}
         for reactant in reactants:
@@ -515,7 +519,6 @@ class Program:
                 elements[item["symbol"]] = float(coefficient) * item["subscript"]
                 reactant_elements[item["symbol"]] = float(coefficient) * item["subscript"]
                 reactant_compounds[reactant] = {"coefficient": float(coefficient), "elements": elements}
-                print("r_compounds: " + str(reactant_compounds))
         for product in products:
             try:
                 coefficient = re.match("^.*?[0-9]*", product).group()
@@ -529,32 +532,54 @@ class Program:
                 elements[item["symbol"]] = float(coefficient) * item["subscript"]
                 product_elements[item["symbol"]] = float(coefficient) * item["subscript"]
                 product_compounds[product] = {"coefficient": float(coefficient), "elements": elements}
-                print("p_compounds: " + str(product_compounds))
 
         balanced = False
+        i = 0
         while not balanced:
+            reactant_text = []
+            product_text = []
+
+            # Calculating new coefficients
             for product in products:
-                atomic_list = self.process_compound(product)
-                for item in atomic_list:
-                    if product_elements[item["symbol"]] < reactant_elements[item["symbol"]]:
-                        remainder = reactant_elements[item["symbol"]] % product_elements[item["symbol"]]
+                for element in product_compounds[product]["elements"]:
+                    if product_elements[element] < reactant_elements[element]:
+                        remainder = reactant_elements[element] % product_elements[element]
                         divisible = remainder == 0
                         if divisible:
-                            product_compounds[product]["coefficient"] *= reactant_elements[item["symbol"]] / product_elements[item["symbol"]]
-                    balanced = product_elements[item["symbol"]] == reactant_elements[item["symbol"]]
-                print(product)
-            for reactant in reactant_compounds:
-                atomic_list = self.process_compound(reactant)
-                for item in atomic_list:
-                    if reactant_elements[item["symbol"]] < product_elements[item["symbol"]]:
-                        remainder = product_elements[item["symbol"]] % reactant_elements[item["symbol"]]
+                            product_compounds[product]["coefficient"] *= reactant_elements[element] / product_elements[element]
+                            atomic_list = self.process_compound(product)
+                            for item in atomic_list:
+                                print(product + ": " + str(products.index(product)))
+                                if products.index(product) == 0:
+                                    product_elements[item["symbol"]] = product_compounds[product]["coefficient"] * item["subscript"]
+                                else:
+                                    product_elements[item["symbol"]] += product_compounds[product]["coefficient"] * item["subscript"]
+                product_text.append(str(int(product_compounds[product]["coefficient"])) + product)
+                print("p_e: " + str(product_elements))
+                #print(str(product_compounds))
+            for reactant in reactants:
+                for element in reactant_compounds[reactant]["elements"]:
+                    if reactant_elements[element] < product_elements[element]:
+                        remainder = product_elements[element] % reactant_elements[element]
                         divisible = remainder == 0
                         if divisible:
-                            reactant_compounds[reactant]["coefficient"] *= product_elements[item["symbol"]] / reactant_elements[item["symbol"]]
-                    balanced = product_elements[item["symbol"]] == reactant_elements[item["symbol"]]
-                print(reactant)
-            balanced = True
-            #print(product_dict + " " + reactant_dict)
+                            reactant_compounds[reactant]["coefficient"] *= product_elements[element] / reactant_elements[element]
+                            atomic_list = self.process_compound(reactant)
+                            for item in atomic_list:
+                                print(reactant + ": " + str(reactants.index(reactant)))
+                                if reactants.index(reactant) == 0:
+                                    reactant_elements[item["symbol"]] = reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                                else:
+                                    reactant_elements[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                reactant_text.append(str(int(reactant_compounds[reactant]["coefficient"])) + reactant)
+                print("r_e: " + str(reactant_elements))
+                #print(str(reactant_compounds))
+            for element in reactant_elements:
+                balanced = product_elements[element] == reactant_elements[element]
+            i += 1
+            if i > 9:
+                balanced = True
+        return (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", ", " + ")).replace("'", "")
 
     def process_compound(self, compound):
         atomic_list = []
@@ -581,7 +606,6 @@ class Program:
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
-                    print(symbol)
                     subscript = re.sub("[^0-9]", "", element_string)
                     if subscript == "":
                         subscript = "1"
