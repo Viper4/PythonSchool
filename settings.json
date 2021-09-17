@@ -1,7 +1,7 @@
 {
   "load_settings": {
-    "show_work": null,
-    "load_locally": null
+    "show_work": true,
+    "load_locally": true
   },
   "commands": {
     "exit": {
