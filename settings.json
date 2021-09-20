@@ -24,12 +24,12 @@
     "get_element_info": {
       "command": ["gei", "get_element_info"],
       "info": "Returns information on given element",
-      "example": "Type a element and variable or all Ex: Ar number"
+      "example": "Type a element and variable or 'all' Ex: Ar number"
     },
     "get_polyatomic_info": {
       "command": ["gpi", "get_polyatomic_info"],
       "info": "Returns information on given polyatomic",
-      "example": "Type a polyatomic and variable or all Ex: OH charge"
+      "example": "Type a polyatomic and variable or 'all' Ex: OH charge"
     },
     "unit_conversion": {
       "command": ["uc", "unit_conversion"],
@@ -49,7 +49,7 @@
     "get_acid_name": {
       "command": ["gan", "get_acid_name"],
       "info": "Returns acidic name of any given chemical formula",
-      "example": "Type formula Ex: H2SO4"
+      "example": "Type formula Ex: H2(SO4)"
     },
     "get_chemical_formula": {
       "command": ["gcf", "get_chemical_formula"],

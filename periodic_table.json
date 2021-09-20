@@ -671,7 +671,7 @@
         {
             "name": "Chlorine",
             "appearance": "pale yellow-green gas",
-            "atomic_mass": 35.45,
+            "atomic_mass": 35.453,
             "boil": 239.11,
             "category": "diatomic nonmetal",
             "density": 3.2,
