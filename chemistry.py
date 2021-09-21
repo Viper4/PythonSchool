@@ -527,14 +527,14 @@ class Program:
             if coefficient == "":
                 coefficient = "1"
             atomic_list = self.process_compound(reactant)
-            elements = {}
+            amounts = {}
             for item in atomic_list:
-                elements[item["symbol"]] = float(coefficient) * item["subscript"]
+                amounts[item["symbol"]] = float(coefficient) * item["subscript"]
                 try:
                     reactant_amounts[item["symbol"]] += float(coefficient) * item["subscript"]
                 except KeyError:
                     reactant_amounts[item["symbol"]] = float(coefficient) * item["subscript"]
-                reactant_compounds[reactant] = {"coefficient": float(coefficient), "elements": elements}
+                reactant_compounds[reactant] = {"coefficient": float(coefficient), "elements": amounts}
         for product in products:
             try:
                 coefficient = re.match("^.*?[0-9]*", product).group()
@@ -551,8 +551,6 @@ class Program:
                 except KeyError:
                     product_amounts[item["symbol"]] = float(coefficient) * item["subscript"]
                 product_compounds[product] = {"coefficient": float(coefficient), "elements": amounts}
-
-        print(str(reactant_amounts) + "\n" + str(product_amounts))
 
         balanced = False
         i = 0
@@ -575,18 +573,23 @@ class Program:
                         remainder = reactant_amounts[element] % product_amounts[element]
                         divisible = remainder == 0
                         if divisible:
-                            product_compounds[product]["coefficient"] *= reactant_amounts[element] / product_amounts[element]
-                            atomic_list = self.process_compound(product)
-                            for item in atomic_list:
-                                try:
-                                    temp_pr_amounts[element] += product_compounds[product]["coefficient"] * item["subscript"]
-                                except KeyError:
-                                    temp_pr_amounts[element] = product_compounds[product]["coefficient"] * item["subscript"]
+                            coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[element] / product_amounts[element])
+                            if show_work:
+                                print(" New coefficient for " + product + ": " + str(coefficient) + " = " + str(product_compounds[product]["coefficient"]) + " * " + str(reactant_amounts[element]) + " / " + str(product_amounts[element]))
+                            product_compounds[product]["coefficient"] = coefficient
+                atomic_list = self.process_compound(product)
+                for item in atomic_list:
+                    try:
+                        temp_pr_amounts[item["symbol"]] += product_compounds[product]["coefficient"] * item["subscript"]
+                    except KeyError:
+                        temp_pr_amounts[item["symbol"]] = product_compounds[product]["coefficient"] * item["subscript"]
+                    product_amounts[item["symbol"]] = temp_pr_amounts[item["symbol"]]
+
                 coefficient_string = str(int(product_compounds[product]["coefficient"]))
                 if len(coefficient_string) == 1 and coefficient_string == "1":
                     coefficient_string = ""
                 product_text.append(coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", product).group(), "", product), "f_subscript"))
-                # print("p_e: " + str(product_amounts))
+
             temp_re_amounts = {}
             for reactant in reactants:
                 for element in reactant_compounds[reactant]["elements"]:
@@ -594,22 +597,23 @@ class Program:
                         remainder = product_amounts[element] % reactant_amounts[element]
                         divisible = remainder == 0
                         if divisible:
-                            reactant_compounds[reactant]["coefficient"] *= product_amounts[element] / reactant_amounts[element]
-                            atomic_list = self.process_compound(reactant)
-                            for item in atomic_list:
-                                try:
-                                    temp_re_amounts[element] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
-                                except KeyError:
-                                    temp_re_amounts[element] = reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                            coefficient = reactant_compounds[reactant]["coefficient"] * (product_amounts[element] / reactant_amounts[element])
+                            if show_work:
+                                print(" New coefficient for " + reactant + ": " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * " + str(product_amounts[element]) + " / " + str(reactant_amounts[element]))
+                            reactant_compounds[reactant]["coefficient"] = coefficient
+                atomic_list = self.process_compound(reactant)
+                for item in atomic_list:
+                    try:
+                        temp_re_amounts[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                    except KeyError:
+                        temp_re_amounts[item["symbol"]] = reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                    reactant_amounts[item["symbol"]] = temp_re_amounts[item["symbol"]]
+
                 coefficient_string = str(int(reactant_compounds[reactant]["coefficient"]))
                 if len(coefficient_string) == 1 and coefficient_string == "1":
                     coefficient_string = ""
                 reactant_text.append(coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", reactant).group(), "", reactant), "f_subscript"))
-                # print("r_e: " + str(reactant_amounts))
-            for element in temp_re_amounts:
-                reactant_amounts[element] = temp_re_amounts[element]
-            for element in temp_pr_amounts:
-                product_amounts[element] = temp_pr_amounts[element]
+
             i += 1
             if i > 9:
                 balanced = True

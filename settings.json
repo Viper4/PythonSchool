@@ -17,52 +17,52 @@
       "info": "Toggles whether work will be shown"
     },
     "get_molar_mass": {
-      "command": ["gmm", "get_molar_mass"],
+      "command": ["/gmm", "get_molar_mass"],
       "info": "Returns molar mass of any chemical formula",
       "example": "Type a compound Ex: 2NaHCO3"
     },
     "get_element_info": {
-      "command": ["gei", "get_element_info"],
+      "command": ["/gei", "get_element_info"],
       "info": "Returns information on given element",
       "example": "Type a element and variable or 'all' Ex: Ar number"
     },
     "get_polyatomic_info": {
-      "command": ["gpi", "get_polyatomic_info"],
+      "command": ["/gpi", "get_polyatomic_info"],
       "info": "Returns information on given polyatomic",
       "example": "Type a polyatomic and variable or 'all' Ex: OH charge"
     },
     "unit_conversion": {
-      "command": ["uc", "unit_conversion"],
+      "command": ["/uc", "unit_conversion"],
       "info": "Converts given unit to given unit",
       "example": "Type unit and formula, then desired unit Ex: 1.3mol NaCl -> g"
     },
     "get_sig_figs": {
-      "command": ["gsf", "get_sig_figs"],
+      "command": ["/gsf", "get_sig_figs"],
       "info": "Counts sig figs in given number",
       "example": "Type a number"
     },
     "get_systematic_name": {
-      "command": ["gsn", "get_systematic_name"],
+      "command": ["/gsn", "get_systematic_name"],
       "info": "Returns systematic name of any given chemical formula",
       "example": "Type formula Ex: Fe2O3"
     },
     "get_acid_name": {
-      "command": ["gan", "get_acid_name"],
+      "command": ["/gan", "get_acid_name"],
       "info": "Returns acidic name of any given chemical formula",
       "example": "Type formula Ex: H2(SO4)"
     },
     "get_chemical_formula": {
-      "command": ["gcf", "get_chemical_formula"],
+      "command": ["/gcf", "get_chemical_formula"],
       "info": "Returns chemical formula of any given systematic name",
       "example": "Type systematic name Ex: Iron(III) Oxide"
     },
     "get_mass_percent": {
-      "command": ["gmp", "get_mass_percent"],
+      "command": ["/gmp", "get_mass_percent"],
       "info": "Returns mass percent of given element(s) in any chemical formula",
       "example": "Type elements/molecules in compound Ex: H2 O in H2O"
     },
     "balance_equation": {
-      "command": ["be", "balance_equation"],
+      "command": ["/be", "balance_equation"],
       "info": "Balances any given chemical equation",
       "example": "Type chemical equation Ex: C5H12 + O2 -> CO2 + H2O"
     }
