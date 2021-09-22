@@ -64,7 +64,7 @@
     "balance_equation": {
       "command": ["/be", "balance_equation"],
       "info": "Balances any given chemical equation",
-      "example": "Type chemical equation Ex: C5H12 + O2 -> CO2 + H2O"
+      "example": "Type chemical equation Ex: NaCl + Ca(SO4) -> Na2(SO4) + CaCl2"
     }
   }
 }

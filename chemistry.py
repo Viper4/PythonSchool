@@ -72,8 +72,9 @@ class Program:
                     self.calcMode = cmd
                     switch_cmd = True
                     break
-                else:
-                    switch_cmd = False
+            else:
+                if self.calcMode == "":
+                    print("Unknown command, type /l for a list of commands")
             if not switch_cmd:
                 try:
                     if self.calcMode == "get_molar_mass":
@@ -206,8 +207,7 @@ class Program:
                     results.append(p_molar_mass)
                     total_molar_mass += p_molar_mass
                 if show_work:
-                    print(" " + formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(
-                        p_molar_mass))
+                    print(" " + formatted_polyatomic + ": " + str(p_atomic_mass) + "*" + p_subscript + " = " + str(p_molar_mass))
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
@@ -222,14 +222,11 @@ class Program:
                             results.append(molar_mass)
                             total_molar_mass += molar_mass
                             if show_work:
-                                print(" " + self.translate_text(element_string, "f_subscript") + ": " + str(
-                                    atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
+                                print(" " + self.translate_text(element_string, "f_subscript") + ": " + str(atomic_mass) + "*" + str(subscript) + " = " + str(molar_mass))
         if len(results) > 1:
             total_molar_mass *= int(coefficient)
             if show_work:
-                print(" " + formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ",
-                                                                                                            "+") + ") = " + str(
-                    total_molar_mass))
+                print(" " + formatted_compound + ": " + str(coefficient) + "(" + str(results)[1:-1].replace(", ", "+") + ") = " + str(total_molar_mass))
             if round_sig_figs:
                 total_molar_mass = self.round_sig_figs(total_molar_mass, results, "+-", show_work)
         return total_molar_mass
@@ -240,8 +237,7 @@ class Program:
         if formula.lower() != "none":
             molar_mass = self.get_molar_mass(formula, False, show_work)
             if show_work:
-                print(str(value) + unit + " " + self.translate_text(formula,
-                                                                    "f_subscript") + " to " + desired_unit + ": ")
+                print(str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " to " + desired_unit + ": ")
 
         if unit == "g" or unit == "grams":
             if desired_unit == "mol" or desired_unit == "moles":
@@ -259,10 +255,12 @@ class Program:
                     output_val = self.round_sig_figs(output_val, [value, molar_mass], "*/", show_work)
             elif desired_unit == "atoms" or desired_unit == "molecules":
                 output_val = value * scipy.constants.N_A
+                split_val = str(output_val).split("e", 1)
                 if show_work:
                     print(" " + str(value) + "*" + str(scipy.constants.N_A) + " = " + str(output_val))
                 if round_sig_figs:
-                    output_val = self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)
+                    output_val = str(self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)) + "e" + split_val[1] + " "
+
         elif unit == "atoms" or unit == "molecules":
             if desired_unit == "mol" or desired_unit == "moles":
                 output_val = value / scipy.constants.N_A
@@ -346,8 +344,7 @@ class Program:
         not_metal = 0
         metal = 0
         for item in atomic_list:
-            if "nonmetal" in item["category"] or "metalloid" in item["category"] or "noble gas" in \
-                    item["category"] or "polyatomic ion" in item["category"]:
+            if "nonmetal" in item["category"] or "metalloid" in item["category"] or "noble gas" in item["category"] or "polyatomic ion" in item["category"]:
                 not_metal += 1
             elif "metal" in item["category"]:
                 metal += 1
@@ -562,22 +559,23 @@ class Program:
                 print(" Reactants | Products")
             for element in reactant_amounts:
                 if show_work:
-                    print(" " + element + ": " + str(reactant_amounts[element]) + " | " + element + ": " + str(product_amounts[element]))
+                    print(" " + self.translate_text(element, "f_subscript") + ": " + str(reactant_amounts[element]) + " | " + self.translate_text(element, "f_subscript") + ": " + str(product_amounts[element]))
                 balanced = reactant_amounts[element] == product_amounts[element]
 
             # Calculating new coefficients
             temp_pr_amounts = {}
             for product in products:
-                for element in product_compounds[product]["elements"]:
-                    if product_amounts[element] < reactant_amounts[element]:
-                        remainder = reactant_amounts[element] % product_amounts[element]
+                atomic_list = self.process_compound(product)
+                amount_key = ""
+                for amount in product_compounds[product]["elements"]:
+                    if product_amounts[amount] < reactant_amounts[amount]:
+                        remainder = reactant_amounts[amount] % product_amounts[amount]
                         divisible = remainder == 0
                         if divisible:
-                            coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[element] / product_amounts[element])
-                            if show_work:
-                                print(" New coefficient for " + product + ": " + str(coefficient) + " = " + str(product_compounds[product]["coefficient"]) + " * " + str(reactant_amounts[element]) + " / " + str(product_amounts[element]))
+                            coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[amount] / product_amounts[amount])
                             product_compounds[product]["coefficient"] = coefficient
-                atomic_list = self.process_compound(product)
+                            amount_key = amount
+                            break
                 for item in atomic_list:
                     try:
                         temp_pr_amounts[item["symbol"]] += product_compounds[product]["coefficient"] * item["subscript"]
@@ -588,20 +586,24 @@ class Program:
                 coefficient_string = str(int(product_compounds[product]["coefficient"]))
                 if len(coefficient_string) == 1 and coefficient_string == "1":
                     coefficient_string = ""
-                product_text.append(coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", product).group(), "", product), "f_subscript"))
+                string = coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", product).group(), "", product), "f_subscript")
+                if amount_key != "" and show_work:
+                    print(" " + string + " coefficient: " + str(int(product_compounds[product]["coefficient"])) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount_key]) + " / " + str(product_amounts[amount_key]) + ")")
+                product_text.append(string)
 
             temp_re_amounts = {}
             for reactant in reactants:
-                for element in reactant_compounds[reactant]["elements"]:
-                    if reactant_amounts[element] < product_amounts[element]:
-                        remainder = product_amounts[element] % reactant_amounts[element]
+                atomic_list = self.process_compound(reactant)
+                amount_key = ""
+                for amount in reactant_compounds[reactant]["elements"]:
+                    if reactant_amounts[amount] < product_amounts[amount]:
+                        remainder = product_amounts[amount] % reactant_amounts[amount]
                         divisible = remainder == 0
                         if divisible:
-                            coefficient = reactant_compounds[reactant]["coefficient"] * (product_amounts[element] / reactant_amounts[element])
-                            if show_work:
-                                print(" New coefficient for " + reactant + ": " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * " + str(product_amounts[element]) + " / " + str(reactant_amounts[element]))
+                            coefficient = reactant_compounds[reactant]["coefficient"] * (product_amounts[amount] / reactant_amounts[amount])
                             reactant_compounds[reactant]["coefficient"] = coefficient
-                atomic_list = self.process_compound(reactant)
+                            amount_key = amount
+                            break
                 for item in atomic_list:
                     try:
                         temp_re_amounts[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
@@ -612,7 +614,10 @@ class Program:
                 coefficient_string = str(int(reactant_compounds[reactant]["coefficient"]))
                 if len(coefficient_string) == 1 and coefficient_string == "1":
                     coefficient_string = ""
-                reactant_text.append(coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", reactant).group(), "", reactant), "f_subscript"))
+                string = coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", reactant).group(), "", reactant), "f_subscript")
+                if amount_key != "" and show_work:
+                    print(" " + string + " coefficient: " + str(int(reactant_compounds[reactant]["coefficient"])) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount_key]) + " / " + str(reactant_amounts[amount_key]) + ")")
+                reactant_text.append(string)
 
             i += 1
             if i > 9:
@@ -631,17 +636,13 @@ class Program:
                     p_subscript = "1"
                 for polyatomic_ion in self.polyatomic_ions["ions"]:
                     if polyatomic_ion["symbol"] in string:
-                        append = False
-                        if len(polyatomic_ion["symbol"]) == len(
-                                re.sub("[()]", "", re.search("[(].*?[)]", string).group())):
-                            append = True
-                        if append:
+                        if len(polyatomic_ion["symbol"]) == len(re.sub("[()]", "", re.search("[(].*?[)]", string).group())):
                             atomic_list.append({"raw_string": string, "symbol": polyatomic_ion["symbol"],
-                                                "name": polyatomic_ion["name"],
-                                                "subscript": int(p_subscript),
-                                                "charge": polyatomic_ion["charge"],
-                                                "category": "polyatomic ion",
-                                                "ending": polyatomic_ion["ending"]})
+                                            "name": polyatomic_ion["name"],
+                                            "subscript": int(p_subscript),
+                                            "charge": polyatomic_ion["charge"],
+                                            "category": "polyatomic ion",
+                                            "ending": polyatomic_ion["ending"]})
             else:
                 for element_string in element_string_list:
                     symbol = re.sub("[^A-Za-z]", "", element_string)
@@ -651,8 +652,8 @@ class Program:
 
                     for element in self.periodic_table["elements"]:
                         if element["symbol"] == symbol:
-                            atomic_list.append(
-                                {"raw_string": element_string, "symbol": symbol, "name": element["name"],
+                            atomic_list.append({"raw_string": element_string, "symbol": symbol,
+                                 "name": element["name"],
                                  "prefix": "", "suffix": "",
                                  "subscript": int(subscript),
                                  "charge": element["charge"],
@@ -675,8 +676,8 @@ class Program:
 
             for polyatomic_ion in self.polyatomic_ions["ions"]:
                 if polyatomic_ion["name"] in formatted_name:
-                    atomic_list.append(
-                        {"sys_name": name, "symbol": "(" + polyatomic_ion["symbol"] + ")", "prefix": prefix, "subscript": subscript,
+                    atomic_list.append({"sys_name": name, "symbol": polyatomic_ion["symbol"],
+                         "prefix": prefix, "subscript": subscript,
                          "category": "polyatomic_ion",
                          "charge": polyatomic_ion["charge"]})
                     break
