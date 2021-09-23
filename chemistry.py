@@ -79,8 +79,7 @@ class Program:
                 try:
                     if self.calcMode == "get_molar_mass":
                         molar_mass = str(self.get_molar_mass(inputString, True, self.show_work))
-                        print("get_molar_mass: " + self.translate_text(inputString,
-                                                                       "f_subscript") + " = " + molar_mass + "g/mol")
+                        print("get_molar_mass: " + self.translate_text(inputString, "f_subscript") + " = " + molar_mass + "g/mol")
                         self.lastResult = molar_mass
                     elif self.calcMode == "get_element_info":
                         split_string = inputString.split(" ", 1)
@@ -177,7 +176,7 @@ class Program:
 
     def get_molar_mass(self, formula, round_sig_figs, show_work):
         try:
-            coefficient = re.match("^.*?[0-9]*", formula).group()
+            coefficient = re.match("(?m)^[0-9]*", formula).group()
         except AttributeError:
             coefficient = "1"
         if coefficient == "":
@@ -379,9 +378,7 @@ class Program:
                             "(" + str(atomic_list[i]["charge"]) + "*" + str(atomic_list[i]["subscript"]) + ")")
                     charge = int(charge / element["subscript"])
                     if show_work:
-                        text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + \
-                               " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(
-                            element["subscript"]) + " = " + str(charge)
+                        text = self.translate_text(element["symbol"] + str(element["subscript"]), "f_subscript") + " charge: " + "-(" + re.sub(", ", "+", str(charges)[1:-1].replace("'", "")) + ")/" + str(element["subscript"]) + " = " + str(charge)
                         print(" " + text)
                     systematic_name = element["name"] + "(" + self.int_to_roman(charge) + ") " + str(systematic_name)
                 else:
@@ -434,8 +431,7 @@ class Program:
                 acid = True
                 metal += 1
             else:
-                if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in element[
-                    "category"] or "polyatomic_ion" in element["category"]:
+                if "nonmetal" in element["category"] or "metalloid" in element["category"] or "noble gas" in element["category"] or "polyatomic_ion" in element["category"]:
                     not_metal += 1
                 elif "metal" in element["category"]:
                     metal += 1
@@ -470,9 +466,10 @@ class Program:
                         other_charge = other_dictionary["charge"]
                         if other_dictionary["charge"] > 0:
                             other_charge = "+" + str(other_dictionary["charge"])
-                        print(" Flip and drop: " +
-                              self.translate_text(self.translate_text(other_dictionary["symbol"], "f_subscript") + str(other_charge)[::-1], "f_superscript")
-                              + " -> " + self.translate_text(dictionary["symbol"] + str(subscript), "f_subscript"))
+                        if dictionary["category"] == "polyatomic_ion":
+                            print(" Flip and drop: " + self.translate_text(self.translate_text(other_dictionary["symbol"], "f_subscript") + str(other_charge)[::-1], "f_superscript") + " -> (" + self.translate_text(dictionary["symbol"] + ")" + str(subscript), "f_subscript"))
+                        else:
+                            print(" Flip and drop: " + self.translate_text(self.translate_text(other_dictionary["symbol"], "f_subscript") + str(other_charge)[::-1], "f_superscript") + " -> " + self.translate_text(dictionary["symbol"] + str(subscript), "f_subscript"))
                     if divisible:
                         if dictionary["charge"] == maxCharge:
                             dictionary["charge"] = -int(maxCharge / minCharge)
@@ -480,7 +477,7 @@ class Program:
                         else:
                             dictionary["charge"] = -int(minCharge / minCharge)
                             other_dictionary["charge"] = -int(maxCharge / minCharge)
-                if dictionary["category"] == "polyatomic_ion" and subscript != 1:
+                if dictionary["category"] == "polyatomic_ion":
                     formula += "(" + dictionary["symbol"] + ")" + str(subscript)
                 else:
                     formula += dictionary["symbol"] + str(subscript)
@@ -518,7 +515,7 @@ class Program:
         product_amounts = {}
         for reactant in reactants:
             try:
-                coefficient = re.match("^.*?[0-9]*", reactant).group()
+                coefficient = re.match("(?m)^[0-9]*", reactant).group()
             except AttributeError:
                 coefficient = "1"
             if coefficient == "":
@@ -528,13 +525,13 @@ class Program:
             for item in atomic_list:
                 amounts[item["symbol"]] = float(coefficient) * item["subscript"]
                 try:
-                    reactant_amounts[item["symbol"]] += float(coefficient) * item["subscript"]
+                    reactant_amounts[item["symbol"]] += int(coefficient) * item["subscript"]
                 except KeyError:
-                    reactant_amounts[item["symbol"]] = float(coefficient) * item["subscript"]
-                reactant_compounds[reactant] = {"coefficient": float(coefficient), "elements": amounts}
+                    reactant_amounts[item["symbol"]] = int(coefficient) * item["subscript"]
+                reactant_compounds[reactant] = {"coefficient": int(coefficient), "elements": amounts}
         for product in products:
             try:
-                coefficient = re.match("^.*?[0-9]*", product).group()
+                coefficient = re.match("(?m)^[0-9]*", product).group()
             except AttributeError:
                 coefficient = "1"
             if coefficient == "":
@@ -544,10 +541,10 @@ class Program:
             for item in atomic_list:
                 amounts[item["symbol"]] = float(coefficient) * item["subscript"]
                 try:
-                    product_amounts[item["symbol"]] += float(coefficient) * item["subscript"]
+                    product_amounts[item["symbol"]] += int(coefficient) * item["subscript"]
                 except KeyError:
-                    product_amounts[item["symbol"]] = float(coefficient) * item["subscript"]
-                product_compounds[product] = {"coefficient": float(coefficient), "elements": amounts}
+                    product_amounts[item["symbol"]] = int(coefficient) * item["subscript"]
+                product_compounds[product] = {"coefficient": int(coefficient), "elements": amounts}
 
         balanced = False
         i = 0
@@ -566,61 +563,63 @@ class Program:
             temp_pr_amounts = {}
             for product in products:
                 atomic_list = self.process_compound(product)
-                amount_key = ""
+                coefficient_string = str(int(product_compounds[product]["coefficient"]))
+                product_string = self.translate_text(re.sub("(?m)^[0-9]*", "", product), "f_subscript")
                 for amount in product_compounds[product]["elements"]:
                     if product_amounts[amount] < reactant_amounts[amount]:
                         remainder = reactant_amounts[amount] % product_amounts[amount]
                         divisible = remainder == 0
                         if divisible:
                             coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[amount] / product_amounts[amount])
-                            product_compounds[product]["coefficient"] = coefficient
-                            amount_key = amount
-                            break
+
+                            if show_work:
+                                print(" " + coefficient_string + product_string + " coefficient: " + str(int(coefficient)) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount]) + " / " + str(product_amounts[amount]) + ")")
+                        else:
+                            coefficient = int(product_compounds[product]["coefficient"] * reactant_amounts[amount])
+                        product_compounds[product]["coefficient"] = coefficient
+                        coefficient_string = str(int(coefficient))
+                        break
                 for item in atomic_list:
                     try:
                         temp_pr_amounts[item["symbol"]] += product_compounds[product]["coefficient"] * item["subscript"]
                     except KeyError:
                         temp_pr_amounts[item["symbol"]] = product_compounds[product]["coefficient"] * item["subscript"]
                     product_amounts[item["symbol"]] = temp_pr_amounts[item["symbol"]]
-
-                coefficient_string = str(int(product_compounds[product]["coefficient"]))
-                if len(coefficient_string) == 1 and coefficient_string == "1":
+                if coefficient_string == "1":
                     coefficient_string = ""
-                string = coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", product).group(), "", product), "f_subscript")
-                if amount_key != "" and show_work:
-                    print(" " + string + " coefficient: " + str(int(product_compounds[product]["coefficient"])) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount_key]) + " / " + str(product_amounts[amount_key]) + ")")
-                product_text.append(string)
+                product_text.append(coefficient_string + product_string)
 
             temp_re_amounts = {}
             for reactant in reactants:
                 atomic_list = self.process_compound(reactant)
-                amount_key = ""
+                coefficient_string = str(int(reactant_compounds[reactant]["coefficient"]))
+                reactant_string = self.translate_text(re.sub("(?m)^[0-9]*", "", reactant), "f_subscript")
                 for amount in reactant_compounds[reactant]["elements"]:
                     if reactant_amounts[amount] < product_amounts[amount]:
                         remainder = product_amounts[amount] % reactant_amounts[amount]
                         divisible = remainder == 0
                         if divisible:
-                            coefficient = reactant_compounds[reactant]["coefficient"] * (product_amounts[amount] / reactant_amounts[amount])
-                            reactant_compounds[reactant]["coefficient"] = coefficient
-                            amount_key = amount
-                            break
+                            coefficient = int(reactant_compounds[reactant]["coefficient"] * (product_amounts[amount] / reactant_amounts[amount]))
+
+                            if show_work:
+                                print(" " + coefficient_string + reactant_string + " coefficient: " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount]) + " / " + str(reactant_amounts[amount]) + ")")
+                        else:
+                            coefficient = int(reactant_compounds[reactant]["coefficient"] * product_amounts[amount])
+                        reactant_compounds[reactant]["coefficient"] = coefficient
+                        coefficient_string = str(int(coefficient))
+                        break
                 for item in atomic_list:
                     try:
                         temp_re_amounts[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
                     except KeyError:
                         temp_re_amounts[item["symbol"]] = reactant_compounds[reactant]["coefficient"] * item["subscript"]
                     reactant_amounts[item["symbol"]] = temp_re_amounts[item["symbol"]]
-
-                coefficient_string = str(int(reactant_compounds[reactant]["coefficient"]))
-                if len(coefficient_string) == 1 and coefficient_string == "1":
-                    coefficient_string = ""
-                string = coefficient_string + self.translate_text(re.sub(re.match("^.*?[0-9]*", reactant).group(), "", reactant), "f_subscript")
-                if amount_key != "" and show_work:
-                    print(" " + string + " coefficient: " + str(int(reactant_compounds[reactant]["coefficient"])) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount_key]) + " / " + str(reactant_amounts[amount_key]) + ")")
-                reactant_text.append(string)
+                    if coefficient_string == "1":
+                        coefficient_string = ""
+                reactant_text.append(coefficient_string + reactant_string)
 
             i += 1
-            if i > 9:
+            if i > 14:
                 balanced = True
         return (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", ", " + ")).replace("'", "")
 
@@ -713,7 +712,7 @@ class Program:
         if translation == "subscript":
             return text.translate(subscript)
         elif translation == "f_subscript":
-            coefficient = re.match("^.*?[0-9]*", text).group()
+            coefficient = re.match("(?m)^[0-9]*", text).group()
             if coefficient == "1":
                 coefficient = ""
             compound = re.search("[(]*[A-Z](.*)+", text).group()
@@ -721,7 +720,7 @@ class Program:
         elif translation == "superscript":
             return text.translate(superscript)
         elif translation == "f_superscript":
-            coefficient = re.match("^.*?[0-9]*", text).group()
+            coefficient = re.match("(?m)^[0-9]*", text).group()
             if coefficient == "1":
                 coefficient = ""
             compound = re.search("[(]*[A-Z](.*)+", text).group()
