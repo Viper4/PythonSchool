@@ -3,6 +3,7 @@ import re
 import time
 import urllib.request
 import scipy.constants
+import math
 
 
 class Program:
@@ -63,7 +64,7 @@ class Program:
             self.show_work = not self.show_work
             print("Show work: " + str(self.show_work))
             re.sub("show work|/sw", "", inputString)
-        if inputString != "/sw" and inputString != "show work":
+        if inputString != "/sw" and inputString != "toggle_work":
             switch_cmd = False
             for cmd in self.settings["commands"]:
                 if inputString.lower() in self.settings["commands"][cmd]["command"]:
@@ -132,8 +133,11 @@ class Program:
                         desired_unit = re.sub("[->][to]?[ ]*", "", split_string[2])
 
                         output = self.unit_conversion(value, unit, desired_unit, formula, True, self.show_work)
-                        print("unit_conversion: " + str(value) + unit + " " + self.translate_text(formula,
-                                                                                                  "f_subscript") + " = " + output)
+                        if formula.lower() == "none" or formula == "->":
+                            print("unit_conversion: " + str(value) + unit + " = " + output)
+                        else:
+                            print("unit_conversion: " + str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " = " + str(output))
+
                         self.lastResult = output
                     elif self.calcMode == "get_sig_figs":
                         if inputString == "Last Result" or inputString == "LR":
@@ -233,7 +237,8 @@ class Program:
     def unit_conversion(self, value, unit, desired_unit, formula, round_sig_figs, show_work):
         output_val = 0
         molar_mass = 0
-        if formula.lower() != "none":
+        multiplier = 1
+        if formula.lower() != "none" and formula != "->":
             molar_mass = self.get_molar_mass(formula, False, show_work)
             if show_work:
                 print(str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " to " + desired_unit + ": ")
@@ -245,6 +250,16 @@ class Program:
                     print(" " + str(value) + "/" + str(molar_mass) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = self.round_sig_figs(output_val, [value, molar_mass], "*/", show_work)
+            elif desired_unit == "kg" or desired_unit == "kilograms":
+                multiplier = 0.001
+                output_val = value
+            elif desired_unit == "mg" or desired_unit == "milligrams":
+                multiplier = 1000
+                output_val = value
+        elif unit == "L" or unit == "liters":
+            if desired_unit == "mL" or desired_unit == "milliliters":
+                multiplier = 0.001
+                output_val = value
         elif unit == "mol" or unit == "moles":
             if desired_unit == "g" or desired_unit == "grams":
                 output_val = value * molar_mass
@@ -259,7 +274,6 @@ class Program:
                     print(" " + str(value) + "*" + str(scipy.constants.N_A) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = str(self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)) + "e" + split_val[1] + " "
-
         elif unit == "atoms" or unit == "molecules":
             if desired_unit == "mol" or desired_unit == "moles":
                 output_val = value / scipy.constants.N_A
@@ -267,6 +281,9 @@ class Program:
                     print(" " + str(value) + "/" + str(scipy.constants.N_A) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)
+        if show_work and multiplier != 1:
+            output_val *= multiplier
+            print(" " + str(value) + "*" + str(multiplier) + " = " + str(output_val))
         return str(output_val) + desired_unit
 
     def get_sig_figs(self, value):
@@ -441,7 +458,7 @@ class Program:
             if show_work:
                 print(" " + systematic_name + " is covalent")
             for item in atomic_list:
-                if item["category"] == "polyatomic_ion" and item["subscript"] != 1:
+                if item["category"] == "polyatomic_ion":
                     formula += "(" + item["symbol"] + ")" + str(item["subscript"])
                 else:
                     formula += item["symbol"] + str(item["subscript"])
@@ -453,14 +470,11 @@ class Program:
                     print(" " + systematic_name + " is ionic")
             for dictionary in atomic_list:
                 subscript = 0
+                index = atomic_list.index(dictionary)
+                other_dictionary = atomic_list[(len(atomic_list) - 1) - index]
+                gcd = math.gcd(int(dictionary["charge"]), int(other_dictionary["charge"]))
                 if dictionary["charge"] is not None:
-                    index = atomic_list.index(dictionary)
-                    other_dictionary = atomic_list[(len(atomic_list) - 1) - index]
                     subscript = abs(other_dictionary["charge"])
-                    maxCharge = max(dictionary["charge"], other_dictionary["charge"])
-                    minCharge = min(dictionary["charge"], other_dictionary["charge"])
-                    remainder = maxCharge % minCharge
-                    divisible = remainder == 0
 
                     if show_work:
                         other_charge = other_dictionary["charge"]
@@ -470,13 +484,8 @@ class Program:
                             print(" Flip and drop: " + self.translate_text(self.translate_text(other_dictionary["symbol"], "f_subscript") + str(other_charge)[::-1], "f_superscript") + " -> (" + self.translate_text(dictionary["symbol"] + ")" + str(subscript), "f_subscript"))
                         else:
                             print(" Flip and drop: " + self.translate_text(self.translate_text(other_dictionary["symbol"], "f_subscript") + str(other_charge)[::-1], "f_superscript") + " -> " + self.translate_text(dictionary["symbol"] + str(subscript), "f_subscript"))
-                    if divisible:
-                        if dictionary["charge"] == maxCharge:
-                            dictionary["charge"] = -int(maxCharge / minCharge)
-                            other_dictionary["charge"] = -int(minCharge / minCharge)
-                        else:
-                            dictionary["charge"] = -int(minCharge / minCharge)
-                            other_dictionary["charge"] = -int(maxCharge / minCharge)
+
+                subscript = int(subscript / gcd)
                 if dictionary["category"] == "polyatomic_ion":
                     formula += "(" + dictionary["symbol"] + ")" + str(subscript)
                 else:
@@ -667,11 +676,14 @@ class Program:
             formatted_name = re.sub("[(].*?[)]", "", name).capitalize()
             prefix = ""
             subscript = 1
-            for pre in self.prefixes_suffixes["prefixes"]:
-                if pre.capitalize() in formatted_name:
-                    prefix = pre
-                    subscript = self.prefixes_suffixes["prefixes"].index(pre) + 1
-                    formatted_name = (re.sub(pre, "", formatted_name.lower())).capitalize()
+            if formatted_name != "Monoxide":
+                for pre in self.prefixes_suffixes["prefixes"]:
+                    if pre.capitalize() in formatted_name:
+                        prefix = pre
+                        subscript = self.prefixes_suffixes["prefixes"].index(pre) + 1
+                        formatted_name = (re.sub(pre, "", formatted_name.lower())).capitalize()
+            else:
+                formatted_name = (re.sub("mon", "", formatted_name.lower())).capitalize()
 
             for polyatomic_ion in self.polyatomic_ions["ions"]:
                 if polyatomic_ion["name"] in formatted_name:

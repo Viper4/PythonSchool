@@ -13,7 +13,7 @@
       "info": "Lists all valid commands"
     },
     "toggle_work": {
-      "command": ["/sw", "show work"],
+      "command": ["/sw", "toggle_work"],
       "info": "Toggles whether work will be shown"
     },
     "get_molar_mass": {
