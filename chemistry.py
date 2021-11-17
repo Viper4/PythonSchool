@@ -4,6 +4,7 @@ import time
 import urllib.request
 import scipy.constants
 import math
+import functools
 
 
 class Program:
@@ -64,7 +65,7 @@ class Program:
             self.show_work = not self.show_work
             print("Show work: " + str(self.show_work))
             re.sub("show work|/sw", "", inputString)
-        if inputString != "/sw" and inputString != "toggle_work":
+        if inputString != "/sw" and inputString != "show work":
             switch_cmd = False
             for cmd in self.settings["commands"]:
                 if inputString.lower() in self.settings["commands"][cmd]["command"]:
@@ -127,16 +128,16 @@ class Program:
                         self.lastResult = inputString
                     elif self.calcMode == "unit_conversion":
                         split_string = re.split("[ ]", inputString, 2)
-                        value = float(re.sub("[A-Za-z]", "", split_string[0]))
+                        value = re.sub("[A-Za-z]", "", split_string[0])
                         unit = re.sub("[0-9]*[.]*[0-9]*", "", split_string[0])
                         formula = split_string[1]
                         desired_unit = re.sub("[->][to]?[ ]*", "", split_string[2])
 
                         output = self.unit_conversion(value, unit, desired_unit, formula, True, self.show_work)
                         if formula.lower() == "none" or formula == "->":
-                            print("unit_conversion: " + str(value) + unit + " = " + output)
+                            print("unit_conversion: " + value + unit + " = " + output)
                         else:
-                            print("unit_conversion: " + str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " = " + str(output))
+                            print("unit_conversion: " + value + unit + " " + self.translate_text(formula, "f_subscript") + " = " + str(output))
 
                         self.lastResult = output
                     elif self.calcMode == "get_sig_figs":
@@ -235,55 +236,52 @@ class Program:
         return total_molar_mass
 
     def unit_conversion(self, value, unit, desired_unit, formula, round_sig_figs, show_work):
-        output_val = 0
+        output_val = float(value)
         molar_mass = 0
         multiplier = 1
         if formula.lower() != "none" and formula != "->":
             molar_mass = self.get_molar_mass(formula, False, show_work)
             if show_work:
-                print(str(value) + unit + " " + self.translate_text(formula, "f_subscript") + " to " + desired_unit + ": ")
+                print(value + unit + " " + self.translate_text(formula, "f_subscript") + " to " + desired_unit + ": ")
 
         if unit == "g" or unit == "grams":
             if desired_unit == "mol" or desired_unit == "moles":
-                output_val = value / molar_mass
+                output_val /= molar_mass
                 if show_work:
-                    print(" " + str(value) + "/" + str(molar_mass) + " = " + str(output_val))
+                    print(" " + value + "/" + str(molar_mass) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = self.round_sig_figs(output_val, [value, molar_mass], "*/", show_work)
             elif desired_unit == "kg" or desired_unit == "kilograms":
                 multiplier = 0.001
-                output_val = value
             elif desired_unit == "mg" or desired_unit == "milligrams":
                 multiplier = 1000
-                output_val = value
         elif unit == "L" or unit == "liters":
             if desired_unit == "mL" or desired_unit == "milliliters":
                 multiplier = 0.001
-                output_val = value
         elif unit == "mol" or unit == "moles":
             if desired_unit == "g" or desired_unit == "grams":
-                output_val = value * molar_mass
+                output_val *= molar_mass
                 if show_work:
-                    print(" " + str(value) + "*" + str(molar_mass) + " = " + str(output_val))
+                    print(" " + value + "*" + str(molar_mass) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = self.round_sig_figs(output_val, [value, molar_mass], "*/", show_work)
             elif desired_unit == "atoms" or desired_unit == "molecules":
-                output_val = value * scipy.constants.N_A
+                output_val *= scipy.constants.N_A
                 split_val = str(output_val).split("e", 1)
                 if show_work:
-                    print(" " + str(value) + "*" + str(scipy.constants.N_A) + " = " + str(output_val))
+                    print(" " + value + "*" + str(scipy.constants.N_A) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = str(self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)) + "e" + split_val[1] + " "
         elif unit == "atoms" or unit == "molecules":
             if desired_unit == "mol" or desired_unit == "moles":
-                output_val = value / scipy.constants.N_A
+                output_val /= scipy.constants.N_A
                 if show_work:
-                    print(" " + str(value) + "/" + str(scipy.constants.N_A) + " = " + str(output_val))
+                    print(" " + value + "/" + str(scipy.constants.N_A) + " = " + str(output_val))
                 if round_sig_figs:
                     output_val = self.round_sig_figs(output_val, [value, scipy.constants.N_A], "*/", show_work)
         if show_work and multiplier != 1:
             output_val *= multiplier
-            print(" " + str(value) + "*" + str(multiplier) + " = " + str(output_val))
+            print(" " + value + "*" + str(multiplier) + " = " + str(output_val))
         return str(output_val) + desired_unit
 
     def get_sig_figs(self, value):
@@ -559,32 +557,54 @@ class Program:
         i = 0
 
         while not balanced:
-            reactant_text = []
-            product_text = []
+            if i > 0:
+                print("\n" + (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", ", " + ")).replace("'", ""))
+            # Simplifying equation
+            reactant_coefficients = []
+            product_coefficients = []
+            for reactant in reactant_compounds:
+                reactant_coefficients.append(reactant_compounds[reactant]["coefficient"])
+            for product in product_compounds:
+                product_coefficients.append(product_compounds[product]["coefficient"])
+            gcd = self.GCD(reactant_coefficients + product_coefficients)
+            if show_work and gcd != 1:
+                print(" Divide " + str(gcd) + " out of equation")
+
+            # Showing reactant and product table
             if show_work:
                 print(" Reactants | Products")
-            for element in reactant_amounts:
+            for pair in reactant_amounts.items():
                 if show_work:
-                    print(" " + self.translate_text(element, "f_subscript") + ": " + str(reactant_amounts[element]) + " | " + self.translate_text(element, "f_subscript") + ": " + str(product_amounts[element]))
-                balanced = reactant_amounts[element] == product_amounts[element]
+                    print(" " + self.translate_text(amount, "f_subscript") + ": " + str(reactant_amounts[amount] / gcd) + " | " + self.translate_text(amount, "f_subscript") + ": " + str(product_amounts[amount] / gcd))
+                if reactant_amounts[amount] != product_amounts[amount]:
+                    balanced = False
+
+            reactant_text = []
+            product_text = []
 
             # Calculating new coefficients
             temp_pr_amounts = {}
             for product in products:
                 atomic_list = self.process_compound(product)
+                product_compounds[product]["coefficient"] /= gcd
                 coefficient_string = str(int(product_compounds[product]["coefficient"]))
                 product_string = self.translate_text(re.sub("(?m)^[0-9]*", "", product), "f_subscript")
                 for amount in product_compounds[product]["elements"]:
                     if product_amounts[amount] < reactant_amounts[amount]:
                         remainder = reactant_amounts[amount] % product_amounts[amount]
                         divisible = remainder == 0
+                        # If divisible multiply coefficient by r/p otherwise multiple coefficient by lcm/p
                         if divisible:
                             coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[amount] / product_amounts[amount])
 
                             if show_work:
-                                print(" " + coefficient_string + product_string + " coefficient: " + str(int(coefficient)) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount]) + " / " + str(product_amounts[amount]) + ")")
+                                print(" " + coefficient_string + product_string + " coef (r/p): " + str(int(coefficient)) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount]) + " / " + str(product_amounts[amount]) + ")")
                         else:
-                            coefficient = int(product_compounds[product]["coefficient"] * reactant_amounts[amount])
+                            lcm = self.LCM([reactant_amounts[amount], product_amounts[amount]])
+                            coefficient = int(product_compounds[product]["coefficient"] * (lcm / product_amounts[amount]))
+
+                            if show_work:
+                                print(" " + coefficient_string + product_string + " coef (lcm/p): " + str(coefficient) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(lcm) + " / " + str(product_amounts[amount]) + ")")
                         product_compounds[product]["coefficient"] = coefficient
                         coefficient_string = str(int(coefficient))
                         break
@@ -601,19 +621,25 @@ class Program:
             temp_re_amounts = {}
             for reactant in reactants:
                 atomic_list = self.process_compound(reactant)
+                reactant_compounds[reactant]["coefficient"] /= gcd
                 coefficient_string = str(int(reactant_compounds[reactant]["coefficient"]))
                 reactant_string = self.translate_text(re.sub("(?m)^[0-9]*", "", reactant), "f_subscript")
                 for amount in reactant_compounds[reactant]["elements"]:
                     if reactant_amounts[amount] < product_amounts[amount]:
                         remainder = product_amounts[amount] % reactant_amounts[amount]
                         divisible = remainder == 0
+                        # If divisible multiply coefficient by p/r otherwise multiple coefficient by lcm/r
                         if divisible:
                             coefficient = int(reactant_compounds[reactant]["coefficient"] * (product_amounts[amount] / reactant_amounts[amount]))
 
                             if show_work:
-                                print(" " + coefficient_string + reactant_string + " coefficient: " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount]) + " / " + str(reactant_amounts[amount]) + ")")
+                                print(" " + coefficient_string + reactant_string + " coef (p/r): " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount]) + " / " + str(reactant_amounts[amount]) + ")")
                         else:
-                            coefficient = int(reactant_compounds[reactant]["coefficient"] * product_amounts[amount])
+                            lcm = self.LCM([reactant_amounts[amount], product_amounts[amount]])
+                            coefficient = int(reactant_compounds[reactant]["coefficient"] * (lcm / reactant_amounts[amount]))
+
+                            if show_work:
+                                print(" " + coefficient_string + reactant_string + " coef (lcm/r): " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(lcm) + " / " + str(reactant_amounts[amount]) + ")")
                         reactant_compounds[reactant]["coefficient"] = coefficient
                         coefficient_string = str(int(coefficient))
                         break
@@ -627,9 +653,11 @@ class Program:
                         coefficient_string = ""
                 reactant_text.append(coefficient_string + reactant_string)
 
+            # Wont repeat infinitely if something goes wrong
             i += 1
             if i > 14:
                 balanced = True
+
         return (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", ", " + ")).replace("'", "")
 
     def process_compound(self, compound):
@@ -676,14 +704,14 @@ class Program:
             formatted_name = re.sub("[(].*?[)]", "", name).capitalize()
             prefix = ""
             subscript = 1
-            if formatted_name != "Monoxide":
-                for pre in self.prefixes_suffixes["prefixes"]:
-                    if pre.capitalize() in formatted_name:
-                        prefix = pre
-                        subscript = self.prefixes_suffixes["prefixes"].index(pre) + 1
+            for pre in self.prefixes_suffixes["prefixes"]:
+                if pre.capitalize() in formatted_name:
+                    prefix = pre
+                    subscript = self.prefixes_suffixes["prefixes"].index(pre) + 1
+                    if formatted_name.lower() == "monoxide":
+                        formatted_name = (formatted_name.lower().replace("mon", "")).capitalize()
+                    else:
                         formatted_name = (re.sub(pre, "", formatted_name.lower())).capitalize()
-            else:
-                formatted_name = (re.sub("mon", "", formatted_name.lower())).capitalize()
 
             for polyatomic_ion in self.polyatomic_ions["ions"]:
                 if polyatomic_ion["name"] in formatted_name:
@@ -775,6 +803,20 @@ class Program:
                 number += roman[roman_num[i]]
                 i += 1
         return number
+
+    def GCD(self, numbers):
+        numbers = list(map(int, numbers))
+        if len(numbers) <= 2:
+            return math.gcd(numbers[0], numbers[1])
+        elif len(numbers) > 2:
+            return functools.reduce(math.gcd, numbers)
+
+    def LCM(self, numbers):
+        numbers = list(map(int, numbers))
+        if len(numbers) <= 2:
+            return (numbers[0] / math.gcd(numbers[0], numbers[1])) * numbers[1]
+        elif len(numbers) > 2:
+            return functools.reduce(self.LCM, numbers)
 
     def syllables(self, word):
         count = 0

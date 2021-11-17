@@ -142,10 +142,10 @@
 	"name": "Carbonate",
 	"symbol": "CO3",
     "charge": -2,
-    "ending": ""
+    "ending": "on"
     },
     {
-	"name": "Hydrogen carbonate",
+	"name": "Bicarbonate",
 	"symbol": "HCO3",
     "charge": -1,
     "ending": ""
