@@ -557,8 +557,9 @@ class Program:
         i = 0
 
         while not balanced:
-            if i > 0:
+            if i > 0 and show_work:
                 print("\n" + (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", ", " + ")).replace("'", ""))
+
             # Simplifying equation
             reactant_coefficients = []
             product_coefficients = []
@@ -573,11 +574,8 @@ class Program:
             # Showing reactant and product table
             if show_work:
                 print(" Reactants | Products")
-            for pair in reactant_amounts.items():
-                if show_work:
+                for amount in reactant_amounts:
                     print(" " + self.translate_text(amount, "f_subscript") + ": " + str(reactant_amounts[amount] / gcd) + " | " + self.translate_text(amount, "f_subscript") + ": " + str(product_amounts[amount] / gcd))
-                if reactant_amounts[amount] != product_amounts[amount]:
-                    balanced = False
 
             reactant_text = []
             product_text = []
@@ -591,20 +589,30 @@ class Program:
                 product_string = self.translate_text(re.sub("(?m)^[0-9]*", "", product), "f_subscript")
                 for amount in product_compounds[product]["elements"]:
                     if product_amounts[amount] < reactant_amounts[amount]:
+                        print(str(amount) + ": " + str(reactant_amounts[amount]) + " | " + str(product_amounts[amount]))
+                        print("GOT HERE PRODUCT")
                         remainder = reactant_amounts[amount] % product_amounts[amount]
                         divisible = remainder == 0
                         # If divisible multiply coefficient by r/p otherwise multiple coefficient by lcm/p
                         if divisible:
-                            coefficient = product_compounds[product]["coefficient"] * (reactant_amounts[amount] / product_amounts[amount])
+                            coefficient = product_compounds[product]["coefficient"] * (
+                                    reactant_amounts[amount] / product_amounts[amount])
 
                             if show_work:
-                                print(" " + coefficient_string + product_string + " coef (r/p): " + str(int(coefficient)) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(reactant_amounts[amount]) + " / " + str(product_amounts[amount]) + ")")
+                                print(" " + coefficient_string + product_string + " coef (r/p): " + str(
+                                    int(coefficient)) + " = " + str(
+                                    product_compounds[product]["coefficient"]) + " * (" + str(
+                                    reactant_amounts[amount]) + " / " + str(product_amounts[amount]) + ")")
                         else:
                             lcm = self.LCM([reactant_amounts[amount], product_amounts[amount]])
-                            coefficient = int(product_compounds[product]["coefficient"] * (lcm / product_amounts[amount]))
+                            coefficient = int(
+                                product_compounds[product]["coefficient"] * (lcm / product_amounts[amount]))
 
                             if show_work:
-                                print(" " + coefficient_string + product_string + " coef (lcm/p): " + str(coefficient) + " = " + str(product_compounds[product]["coefficient"]) + " * (" + str(lcm) + " / " + str(product_amounts[amount]) + ")")
+                                print(" " + coefficient_string + product_string + " coef (lcm/p): " + str(
+                                    coefficient) + " = " + str(
+                                    product_compounds[product]["coefficient"]) + " * (" + str(
+                                    lcm) + " / " + str(product_amounts[amount]) + ")")
                         product_compounds[product]["coefficient"] = coefficient
                         coefficient_string = str(int(coefficient))
                         break
@@ -626,32 +634,59 @@ class Program:
                 reactant_string = self.translate_text(re.sub("(?m)^[0-9]*", "", reactant), "f_subscript")
                 for amount in reactant_compounds[reactant]["elements"]:
                     if reactant_amounts[amount] < product_amounts[amount]:
+                        print(str(amount) + ": " + str(reactant_amounts[amount]) + " | " + str(product_amounts[amount]))
+                        print("GOT HERE REACTANT")
                         remainder = product_amounts[amount] % reactant_amounts[amount]
                         divisible = remainder == 0
                         # If divisible multiply coefficient by p/r otherwise multiple coefficient by lcm/r
                         if divisible:
-                            coefficient = int(reactant_compounds[reactant]["coefficient"] * (product_amounts[amount] / reactant_amounts[amount]))
+                            coefficient = int(reactant_compounds[reactant]["coefficient"] * (
+                                    product_amounts[amount] / reactant_amounts[amount]))
 
                             if show_work:
-                                print(" " + coefficient_string + reactant_string + " coef (p/r): " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(product_amounts[amount]) + " / " + str(reactant_amounts[amount]) + ")")
+                                print(" " + coefficient_string + reactant_string + " coef (p/r): " + str(
+                                    coefficient) + " = " + str(
+                                    reactant_compounds[reactant]["coefficient"]) + " * (" + str(
+                                    product_amounts[amount]) + " / " + str(reactant_amounts[amount]) + ")")
                         else:
                             lcm = self.LCM([reactant_amounts[amount], product_amounts[amount]])
-                            coefficient = int(reactant_compounds[reactant]["coefficient"] * (lcm / reactant_amounts[amount]))
+                            coefficient = int(
+                                reactant_compounds[reactant]["coefficient"] * (lcm / reactant_amounts[amount]))
 
                             if show_work:
-                                print(" " + coefficient_string + reactant_string + " coef (lcm/r): " + str(coefficient) + " = " + str(reactant_compounds[reactant]["coefficient"]) + " * (" + str(lcm) + " / " + str(reactant_amounts[amount]) + ")")
+                                print(" " + coefficient_string + reactant_string + " coef (lcm/r): " + str(
+                                    coefficient) + " = " + str(
+                                    reactant_compounds[reactant]["coefficient"]) + " * (" + str(
+                                    lcm) + " / " + str(reactant_amounts[amount]) + ")")
                         reactant_compounds[reactant]["coefficient"] = coefficient
                         coefficient_string = str(int(coefficient))
                         break
                 for item in atomic_list:
                     try:
-                        temp_re_amounts[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                        temp_re_amounts[item["symbol"]] += reactant_compounds[reactant]["coefficient"] * item[
+                            "subscript"]
                     except KeyError:
-                        temp_re_amounts[item["symbol"]] = reactant_compounds[reactant]["coefficient"] * item["subscript"]
+                        temp_re_amounts[item["symbol"]] = reactant_compounds[reactant]["coefficient"] * item[
+                            "subscript"]
                     reactant_amounts[item["symbol"]] = temp_re_amounts[item["symbol"]]
                     if coefficient_string == "1":
                         coefficient_string = ""
                 reactant_text.append(coefficient_string + reactant_string)
+
+            for pair in reactant_amounts.items():
+                if pair[1] != product_amounts[pair[0]]:
+                    balanced = False
+                    break
+            else:
+                # Showing reactant and product table
+                if show_work:
+                    print("\n" + (str(reactant_text)[1:-1].replace(", ", " + ") + " -> " + str(product_text)[1:-1].replace(", "," + ")).replace("'", ""))
+
+                    print(" Reactants | Products")
+                    for amount in reactant_amounts:
+                        print(" " + self.translate_text(amount, "f_subscript") + ": " + str(reactant_amounts[amount] / gcd) + " | " + self.translate_text(amount,"f_subscript") + ": " + str(product_amounts[amount] / gcd))
+
+                balanced = True
 
             # Wont repeat infinitely if something goes wrong
             i += 1
